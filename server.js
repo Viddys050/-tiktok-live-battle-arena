@@ -52,6 +52,8 @@ const wss = new WebSocketServer({ server });
 let tiktok = null;
 let tiktokStatus = "offline";
 let tiktokError = "";
+let reconnectTimer = null;
+let reconnectInProgress = false;
 let round = 1;
 let roundStarted = Date.now();
 let totalLikes = 0;
@@ -428,6 +430,8 @@ async function getTikTokRoomId(username) {
 }
 
 async function connectTikTok() {
+  if (reconnectInProgress) return;
+  reconnectInProgress = true;
   console.log("=== TIKTOK CONNECTION START ===");
   console.log("Username:", config.tiktokUsername);
 
@@ -504,12 +508,20 @@ async function connectTikTok() {
     console.error("=== TIKTOK CONNECT FAILED ===");
     console.error(err);
 
-    tiktokStatus = "error";
-    tiktokError = String(err?.message || err);
-
-    pushEvent(`🔴 TikTok connection failed: ${tiktokError}`, "error");
+    tiktokStatus = "offline";
+    tiktokError = "Waiting for @${username} to go LIVE";
+    console.log("TikTok is currently offline/not discoverable. Will retry automatically.");
     broadcastState();
+  } finally {
+    reconnectInProgress = false;
   }
+}
+function scheduleTikTokReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setInterval(async () => {
+    if (tiktokStatus === "connected" || reconnectInProgress) return;
+    await connectTikTok();
+  }, 30000);
 }
 function resetRound() {
   round++;
@@ -573,4 +585,5 @@ setInterval(() => {
 server.listen(PORT, async () => {
   console.log(`Battle Arena v2 running on http://localhost:${PORT}`);
   await connectTikTok();
+  scheduleTikTokReconnect();
 });
