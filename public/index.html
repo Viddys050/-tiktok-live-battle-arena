@@ -681,7 +681,7 @@ function connect(){
   }
 }
 
-function setStatus(status){
+function setStatus(status, errorMessage = ""){
 
   if(status === "connected"){
     els.status.textContent = "TIKTOK LIVE: CONNECTED";
@@ -694,8 +694,12 @@ function setStatus(status){
   }
 
   else if(status === "error"){
-    els.status.textContent = "TIKTOK: ERROR";
+    els.status.textContent =
+      "TIKTOK ERROR: " + (errorMessage || "UNKNOWN ERROR");
+
     els.status.className = "status tiktok-error";
+
+    console.error("TikTok connection error:", errorMessage);
   }
 
   else if(status === "offline"){
@@ -709,7 +713,9 @@ function setStatus(status){
   }
 
   else{
-    els.status.textContent = "TIKTOK: " + String(status).toUpperCase();
+    els.status.textContent =
+      "TIKTOK: " + String(status || "UNKNOWN").toUpperCase();
+
     els.status.className = "status";
   }
 }
