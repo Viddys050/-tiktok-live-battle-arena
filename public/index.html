@@ -146,8 +146,23 @@ body{
   white-space:nowrap;
 }
 
+.musicBtn{
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.55);
+  color:#fff;
+  border-radius:8px;
+  padding:5px 7px;
+  font-size:9px;
+  font-weight:900;
+  cursor:pointer;
+}
+.musicBtn.on{
+  border-color:rgba(97,226,148,.6);
+  color:#61e294;
+}
+
 .round{
-  margin-left:auto;
+  margin-left:0;
   font-size:11px;
   font-weight:800;
   background:rgba(0,0,0,.48);
@@ -621,6 +636,8 @@ body{
       <span class="round" id="round">
         ROUND 1
       </span>
+
+      <button class="musicBtn" id="musicBtn" type="button">🔇 MUSIC</button>
     </div>
 
     <div class="scorebar">
@@ -691,6 +708,7 @@ const arena = document.getElementById("arena");
 
 const els = {
   status: document.getElementById("status"),
+  musicBtn: document.getElementById("musicBtn"),
   round: document.getElementById("round"),
   timer: document.getElementById("timer"),
   red: document.getElementById("redScore"),
@@ -704,6 +722,105 @@ const els = {
 let state = null;
 let nodes = new Map();
 let lastEvents = new Set();
+let ws = null;
+
+// 🎵 Ingebouwde copyright-vrije cyberpunk achtergrondmuziek.
+// De muziek wordt lokaal door de browser gemaakt, dus er is geen extern MP3-bestand nodig.
+let audioCtx = null;
+let masterGain = null;
+let musicTimer = null;
+let musicStep = 0;
+let musicOn = false;
+
+function startMusic(){
+  if(musicOn) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === "suspended") audioCtx.resume();
+
+    masterGain = masterGain || audioCtx.createGain();
+    masterGain.gain.value = 0.055;
+    masterGain.connect(audioCtx.destination);
+
+    const bass = [55,55,65.41,55,73.42,55,65.41,49];
+    const lead = [220,261.63,329.63,261.63,293.66,246.94,329.63,196];
+
+    const note = (freq,duration,type,volume,when)=>{
+      const o=audioCtx.createOscillator();
+      const g=audioCtx.createGain();
+      o.type=type;
+      o.frequency.setValueAtTime(freq,when);
+      g.gain.setValueAtTime(0.0001,when);
+      g.gain.exponentialRampToValueAtTime(volume,when+0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001,when+duration);
+      o.connect(g); g.connect(masterGain);
+      o.start(when); o.stop(when+duration+0.03);
+    };
+
+    const tick=()=>{
+      if(!musicOn) return;
+      const t=audioCtx.currentTime+0.02;
+      const b=bass[musicStep%bass.length];
+      const l=lead[musicStep%lead.length];
+      note(b,0.22,"sawtooth",0.22,t);
+      if(musicStep%2===0) note(l,0.16,"square",0.045,t+0.04);
+
+      if(musicStep%4===0){
+        const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+        o.type="triangle"; o.frequency.value=110;
+        g.gain.setValueAtTime(0.07,t);
+        g.gain.exponentialRampToValueAtTime(0.0001,t+0.09);
+        o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+0.1);
+      }
+
+      musicStep++;
+      musicTimer=setTimeout(tick,230);
+    };
+
+    musicOn=true;
+    els.musicBtn.textContent="🔊 MUSIC ON";
+    els.musicBtn.classList.add("on");
+    tick();
+  }catch(err){
+    console.warn("Music unavailable",err);
+  }
+}
+
+function stopMusic(){
+  musicOn=false;
+  if(musicTimer) clearTimeout(musicTimer);
+  musicTimer=null;
+  els.musicBtn.textContent="🔇 MUSIC";
+  els.musicBtn.classList.remove("on");
+}
+
+function playSfx(kind){
+  if(!musicOn || !audioCtx || !masterGain) return;
+  const t=audioCtx.currentTime;
+  const presets={
+    collision:[95,"sawtooth",0.12,0.16],
+    attack:[180,"square",0.08,0.12],
+    boss:[70,"sawtooth",0.16,0.45],
+    shield:[440,"sine",0.07,0.22],
+    rage:[330,"triangle",0.08,0.28]
+  };
+  const p=presets[kind];
+  if(!p) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type=p[1];
+  o.frequency.setValueAtTime(p[0],t);
+  o.frequency.exponentialRampToValueAtTime(p[0]*1.8,t+p[3]);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(p[2],t+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+p[3]);
+  o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+p[3]+0.03);
+}
+
+els.musicBtn.addEventListener("click",()=>{
+  if(musicOn) stopMusic();
+  else startMusic();
+});
+
 let ws = null;
 
 function wsUrl(){
@@ -966,16 +1083,19 @@ function hearts(count=5){
 function action(m){
 
   if(m.action === "boss"){
+    playSfx("boss");
     els.flash.style.display = "block";
     showBanner("👹 BOSS ATTACK!");
     setTimeout(() => els.flash.style.display = "none",300);
   }
 
   if(m.action === "shield"){
+    playSfx("shield");
     showBanner("🛡️ SHIELD!");
   }
 
   if(m.action === "rage"){
+    playSfx("rage");
     showBanner("⚡ RAGE!");
   }
 
@@ -985,6 +1105,7 @@ function action(m){
   }
 
   if(m.action === "collision" && m.a && m.b){
+    playSfx("collision");
     const a=nodes.get(m.a), b=nodes.get(m.b);
     if(a && b){
       const ar=arena.getBoundingClientRect(), aa=a.getBoundingClientRect(), bb=b.getBoundingClientRect();
@@ -997,6 +1118,7 @@ function action(m){
   }
 
   if(m.action === "attack" && m.from && m.to){
+    playSfx("attack");
     const a = nodes.get(m.from);
     const b = nodes.get(m.to);
 
