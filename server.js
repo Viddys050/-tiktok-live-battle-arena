@@ -668,6 +668,12 @@ app.post("/api/config", async (req,res) => {
   if (typeof incoming.demoMode === "boolean") config.demoMode = incoming.demoMode;
   if (Number.isFinite(Number(incoming.roundSeconds)))
     config.roundSeconds = Math.max(30, Math.min(600, Number(incoming.roundSeconds)));
+  if (Number.isFinite(Number(incoming.maxPlayers)))
+    config.maxPlayers = Math.max(1, Math.min(200, Number(incoming.maxPlayers)));
+  if (Number.isFinite(Number(incoming.commentCooldownMs)))
+    config.commentCooldownMs = Math.max(0, Number(incoming.commentCooldownMs));
+  if (Number.isFinite(Number(incoming.likeCooldownMs)))
+    config.likeCooldownMs = Math.max(0, Number(incoming.likeCooldownMs));
   if (incoming.commands && typeof incoming.commands === "object") config.commands = incoming.commands;
   if (incoming.gifts && typeof incoming.gifts === "object") config.gifts = incoming.gifts;
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
