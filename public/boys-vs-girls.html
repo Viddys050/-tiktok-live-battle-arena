@@ -18,7 +18,7 @@
 </style>
 </head>
 <body><div class="app" id="app">
-<div class="top"><span class="live">● LIVE</span><span id="status" class="status">TIKTOK: CONNECTING...</span><div class="title">BOYS ⚡ GIRLS</div><div class="sub">LIKE & GIFT BATTLE • THE BIGGER THE GIFT, THE BIGGER THE ATTACK</div><div class="sub" style="margin-top:3px;color:#fff8">GAME MADE BY LORENZOLAVIDO</div>
+<div class="top"><span class="live">● LIVE</span><span id="status" class="status">TIKTOK: CONNECTING...</span><div class="title">BOYS ⚡ GIRLS</div><div class="sub">LIVE TEAM BATTLE • EVERY LIKE MAKES A DIFFERENCE</div><div class="sub" style="margin-top:3px;color:#fff8">GAME MADE BY LORENZOLAVIDO</div>
 <div class="scores"><div class="team boys">🔵 BOYS<span class="num" id="boys">0</span></div><div class="timer" id="timer">2:00</div><div class="team girls" style="text-align:right">GIRLS 🩷<span class="num" id="girls">0</span></div></div></div>
 <div class="feed" id="feed"></div><div class="bigfx" id="fx"></div>
 <div class="arena" id="arena">
@@ -44,16 +44,7 @@
 <div>❤️ <b>LIKE</b> = team power</div>
 <div>🎁 <b>GIFT</b> = attack power</div>
 </div>
-<div class="giftguide">
-<div class="guideTitle">🎁 GIFT POWER — EVERY GIFT COUNTS!</div>
-<div class="guideText">The more valuable the gift, the stronger the attack. Save your biggest gifts for the final battle!</div>
-<div class="giftrow"><span>🌹 Rose</span><b>SMALL ATTACK</b></div>
-<div class="giftrow"><span>💗 Finger Heart</span><b>SHIELD</b></div>
-<div class="giftrow"><span>🌸 Perfume</span><b>RAGE BOOST</b></div>
-<div class="giftrow"><span>❤️ Heart Me</span><b>STRONG RAGE</b></div>
-<div class="giftrow galaxy"><span>🌌 Galaxy</span><b>💥 BOSS ATTACK</b></div>
-<div class="finalhint">🔥 LAST 10 SECONDS = FINAL BATTLE • LIKES x3 • GIFTS x2</div>
-</div>
+<div class="giftguide"><div class="guideTitle">⚡ LIVE BATTLE EFFECTS</div><div class="guideText">Likes and gifts received during the LIVE can trigger battle effects automatically.</div><div class="giftrow"><span>❤️ Likes</span><b>TEAM POWER</b></div><div class="giftrow"><span>🎁 Gifts</span><b>AUTOMATIC EFFECT</b></div><div class="giftrow galaxy"><span>🔥 Final 10 seconds</span><b>FINAL BATTLE</b></div></div>
 </div>
 <script>
 const $=id=>document.getElementById(id);let ws,seen=new Set(),state;
@@ -63,6 +54,6 @@ function render(s){state=s;setStatus(s.tiktokStatus);const final=(s.remaining||0
 function upsert(p){}
 function feed(i){if(!i||seen.has(i.id))return;seen.add(i.id);const d=document.createElement('div');d.className='event';d.textContent=i.text;$('feed').appendChild(d);while($('feed').children.length>5)$('feed').firstChild.remove();setTimeout(()=>d.remove(),6000)}
 function fx(t){const e=$('fx');e.textContent=t;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
-function action(m){if(m.action==='like'){for(let i=0;i<Math.min(15,m.count||5);i++){const h=document.createElement('div');h.className='heart';h.textContent='❤';h.style.left=(20+Math.random()*60)+'%';h.style.top=(55+Math.random()*20)+'%';h.style.setProperty('--x',(Math.random()*70-35)+'px');$('arena').appendChild(h);setTimeout(()=>h.remove(),1200)}fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE POWER!')}if(m.action==='team')fx(m.team==='red'?'🔵 BOYS!':'🩷 GIRLS!');if(m.action==='attack')fx(m.source==='gift'?'🎁 GIFT POWER!':'⚔️ ATTACK!');if(m.action==='giftPower')fx(m.finalBattle?'🔥 GIFT x2 — FINAL BATTLE!':'🎁 GIFT POWER!')}
+function action(m){if(m.action==='like'){for(let i=0;i<Math.min(15,m.count||5);i++){const h=document.createElement('div');h.className='heart';h.textContent='❤';h.style.left=(20+Math.random()*60)+'%';h.style.top=(55+Math.random()*20)+'%';h.style.setProperty('--x',(Math.random()*70-35)+'px');$('arena').appendChild(h);setTimeout(()=>h.remove(),1200)}fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE POWER!')}if(m.action==='team')fx(m.team==='red'?'🔵 BOYS!':'🩷 GIRLS!');if(m.action==='attack')fx(m.source==='gift'?'🎁 GIFT POWER!':'⚔️ ATTACK!');if(m.action==='giftPower')fx(m.finalBattle?'🔥 FINAL BATTLE!':'⚡ BATTLE EFFECT!')}
 connect();
 </script></div></body></html>
