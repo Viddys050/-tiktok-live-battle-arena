@@ -794,11 +794,13 @@ wss.on("connection", ws => {
   });
 });
 
+// Snelle game-loop: beweging en positie worden 20x per seconde doorgestuurd
+// zodat de spelers op telefoon en monitor vloeiend bewegen.
 setInterval(() => {
   updateArenaPhysics();
   if (now() - roundStarted >= Number(config.roundSeconds || 120)*1000) resetRound();
   broadcastState();
-}, 1000);
+}, 50);
 
 server.listen(PORT, async () => {
   console.log(`Battle Arena v2 running on http://localhost:${PORT}`);
