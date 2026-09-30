@@ -289,9 +289,9 @@ async function getTikTokRoomId(username) {
     console.log("TikTok LIVE page HTTP:", pageResponse.status, "bytes:", html.length);
 
     const directPatterns = [
-      /snssdk\\d*:\\/\\/live\\?room_id=(\\d+)/i,
-      /"roomId"\\s*:\\s*"?(\\d{10,})"?/i,
-      /"room_id"\\s*:\\s*"?(\\d{10,})"?/i
+      /snssdk\d*:\/\/live\?room_id=(\d+)/i,
+      /"roomId"\s*:\s*"?(\d{10,})"?/i,
+      /"room_id"\s*:\s*"?(\d{10,})"?/i
     ];
     for (const pattern of directPatterns) {
       const match = html.match(pattern);
@@ -302,9 +302,9 @@ async function getTikTokRoomId(username) {
     }
 
     const scriptPatterns = [
-      /<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\\s\\S]*?)<\\/script>/i,
-      /<script[^>]+id="sigi-persisted-data"[^>]*>([\\s\\S]*?)<\\/script>/i,
-      /<script[^>]+id="SIGI_STATE"[^>]*>([\\s\\S]*?)<\\/script>/i
+      /<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/i,
+      /<script[^>]+id="sigi-persisted-data"[^>]*>([\s\S]*?)<\/script>/i,
+      /<script[^>]+id="SIGI_STATE"[^>]*>([\s\S]*?)<\/script>/i
     ];
     for (const pattern of scriptPatterns) {
       const match = html.match(pattern);
@@ -312,7 +312,7 @@ async function getTikTokRoomId(username) {
       try {
         const data = JSON.parse(match[1]);
         const json = JSON.stringify(data);
-        const roomMatch = json.match(/"roomId":"?(\\d{10,})"?/i);
+        const roomMatch = json.match(/"roomId":"?(\d{10,})"?/i);
         if (roomMatch?.[1]) {
           console.log("Found LIVE room ID in embedded JSON:", roomMatch[1]);
           return String(roomMatch[1]);
