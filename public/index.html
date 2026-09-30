@@ -394,6 +394,24 @@ body{
   font-weight:1000;
   border:2px solid rgba(255,255,255,.5);
   box-shadow:0 5px 15px rgba(0,0,0,.35);
+  animation:orbSpin 1.8s linear infinite;
+  transform-origin:center;
+}
+
+@keyframes orbSpin{
+  from{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.04)}
+  to{transform:rotate(360deg) scale(1)}
+}
+
+.collisionFX{
+  position:absolute;z-index:29;font-size:28px;pointer-events:none;
+  animation:collisionPop .65s ease-out forwards;
+}
+@keyframes collisionPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}
+  20%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}
+  100%{opacity:0;transform:translate(-50%,-80%) scale(.7)}
 }
 
 .red .orb{
@@ -964,6 +982,18 @@ function action(m){
   if(m.action === "like"){
     hearts(m.count || 5);
     showBanner("❤ LIKE POWER!");
+  }
+
+  if(m.action === "collision" && m.a && m.b){
+    const a=nodes.get(m.a), b=nodes.get(m.b);
+    if(a && b){
+      const ar=arena.getBoundingClientRect(), aa=a.getBoundingClientRect(), bb=b.getBoundingClientRect();
+      const fx=document.createElement("div"); fx.className="collisionFX"; fx.textContent="💥";
+      fx.style.left=((aa.left+bb.left)/2-ar.left+26)+"px";
+      fx.style.top=((aa.top+bb.top)/2-ar.top+26)+"px";
+      arena.appendChild(fx); setTimeout(()=>fx.remove(),700);
+    }
+    showBanner("💥 COLLISION!");
   }
 
   if(m.action === "attack" && m.from && m.to){
