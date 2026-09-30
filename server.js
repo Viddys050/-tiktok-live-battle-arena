@@ -406,13 +406,11 @@ async function connectTikTok() {
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
       connectWithUniqueId: true,
-      logFetchFallbackErrors: false,
-      disableEulerFallbacks: true
+      logFetchFallbackErrors: true,
+      disableEulerFallbacks: false
     });
 
-    console.log("Finding TikTok LIVE room through TikTok API...");
-    const roomId = await getTikTokRoomId(username);
-    console.log("Found LIVE room ID:", roomId);
+    console.log("Using TikTok connector automatic room lookup (HTML → API → Euler)...");
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
     tiktok.on(WebcastEvent.LIKE, handleLike);
@@ -421,7 +419,7 @@ async function connectTikTok() {
 
     tiktok.on("connected", (state) => {
       console.log("=== TIKTOK CONNECTED ===");
-      console.log("Room ID:", state?.roomId || roomId);
+      console.log("Room ID:", state?.roomId || "unknown");
       tiktokStatus = "connected";
       tiktokError = "";
       pushEvent(`🟢 Connected to @${username}`, "system");
@@ -445,7 +443,7 @@ async function connectTikTok() {
     });
 
     console.log("Calling tiktok.connect(roomId)...");
-    const result = await tiktok.connect(roomId);
+    const result = await tiktok.connect();
 
     console.log("=== TIKTOK CONNECT() RESOLVED ===");
     console.log(result);
