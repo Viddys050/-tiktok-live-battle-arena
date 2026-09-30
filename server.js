@@ -4,7 +4,7 @@ import { WebSocketServer } from "ws";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
+import { TikTokLiveConnection, WebcastEvent, fetchRoomInfoFromApiLiveRoute } from "tiktok-live-connector";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -274,31 +274,22 @@ function serialize() {
 }
 function broadcastState() { broadcast(serialize()); }
 
-async function getTikTokRoomId(username) {
-  const url = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9"
-    },
-    redirect: "follow"
+async function getTikTokRoomId(connection, username) {
+  console.log("Trying TikTok API Live room lookup...");
+  const roomData = await fetchRoomInfoFromApiLiveRoute({
+    webClient: connection.webClient,
+    uniqueId: username
   });
-  if (!response.ok) throw new Error(`TikTok page returned HTTP ${response.status}`);
-  const html = await response.text();
-  const markerStart = '<script id="SIGI_STATE" type="application/json">';
-    const markerEnd = "</script>";
-    const start = html.indexOf(markerStart);
-    const end = start >= 0 ? html.indexOf(markerEnd, start + markerStart.length) : -1;
-    const match = start >= 0 && end >= 0 ? [markerStart, html.slice(start + markerStart.length, end)] : null;
-  if (!match) throw new Error("TikTok LIVE page did not contain SIGI_STATE");
-  const state = JSON.parse(match[1]);
-  const info = state?.LiveRoom?.liveRoomUserInfo;
-  const roomId = info?.roomId || info?.room_id || info?.roomInfo?.roomId || info?.roomInfo?.room_id;
-  if (!roomId) throw new Error("TikTok LIVE page contained no room ID");
+  const roomId =
+    roomData?.data?.user?.roomId ||
+    roomData?.data?.liveRoom?.roomId;
+  if (!roomId) {
+    throw new Error(
+      `TikTok API Live returned no room ID (status ${roomData?.statusCode ?? "unknown"})`
+    );
+  }
   return String(roomId);
 }
-
 
 async function connectTikTok() {
   console.log("=== TIKTOK CONNECTION START ===");
@@ -326,16 +317,16 @@ async function connectTikTok() {
     tiktokError = "";
     broadcastState();
 
-    console.log("Finding TikTok LIVE room directly...");
-    const roomId = await getTikTokRoomId(username);
-    console.log("Found LIVE room ID:", roomId);
-
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
       connectWithUniqueId: true,
       logFetchFallbackErrors: false,
       disableEulerFallbacks: true
     });
+
+    console.log("Finding TikTok LIVE room through TikTok API...");
+    const roomId = await getTikTokRoomId(tiktok, username);
+    console.log("Found LIVE room ID:", roomId);
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
     tiktok.on(WebcastEvent.LIKE, handleLike);
