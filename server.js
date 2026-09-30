@@ -303,9 +303,12 @@ async function getTikTokRoomIdWithBrowser(username) {
       const patterns = [
         /"roomId"\s*[:=]\s*"?(\d{10,})"?/gi,
         /"room_id"\s*[:=]\s*"?(\d{10,})"?/gi,
-        /roomId\\D{0,20}(\d{10,})/gi,
-        /room_id\\D{0,20}(\d{10,})/gi,
-        /roomID\\D{0,20}(\d{10,})/gi
+        /roomId\D{0,80}(\d{10,})/gi,
+        /room_id\D{0,80}(\d{10,})/gi,
+        /roomID\D{0,80}(\d{10,})/gi,
+        /room_id=(\d{10,})/gi,
+        /roomId=(\d{10,})/gi,
+        /webcast_id[=:](\d{10,})/gi
       ];
       for (const re of patterns) {
         for (const m of text.matchAll(re)) candidates.add(m[1]);
@@ -316,6 +319,7 @@ async function getTikTokRoomIdWithBrowser(username) {
       try {
         const url = response.url();
         if (!/tiktok\.com/i.test(url)) return;
+        inspect(url);
         if (!/live|room|webcast|api-live/i.test(url)) return;
         const body = await response.text();
         inspect(body);
@@ -324,8 +328,11 @@ async function getTikTokRoomIdWithBrowser(username) {
 
     const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
     await page.goto(liveUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(10000);
 
+    console.log("Chromium final URL:", page.url());
+    console.log("Chromium title:", await page.title());
+    inspect(page.url());
     inspect(await page.content());
 
     const scriptData = await page.evaluate(() => {
@@ -345,6 +352,7 @@ async function getTikTokRoomIdWithBrowser(username) {
       return roomId;
     }
 
+    console.log("Headless Chromium candidate count:", candidates.size);
     console.log("Headless Chromium did not expose a LIVE room ID.");
   } catch (err) {
     console.log("Headless Chromium room lookup failed:", err?.message || err);
