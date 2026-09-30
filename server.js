@@ -211,6 +211,7 @@ function command(p, cmd) {
   }
 }
 function rawTikTokEvent(event, data) { try { broadcast({ type:"rawEvent", event, data }); } catch {} }
+function bindTikTokEvent(name, eventName) { try { tiktok.on(name, data => rawTikTokEvent(eventName, data)); } catch {} }
 function handleChat(data) {
   rawTikTokEvent("CHAT", data);
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
@@ -572,6 +573,17 @@ async function connectTikTok() {
     tiktok.on(WebcastEvent.LIKE, handleLike);
     tiktok.on(WebcastEvent.GIFT, handleGift);
     tiktok.on(WebcastEvent.MEMBER, handleMember);
+    bindTikTokEvent("social","SOCIAL");
+    bindTikTokEvent("follow","FOLLOW");
+    bindTikTokEvent("share","SHARE");
+    bindTikTokEvent("roomUser","ROOM_USER");
+    bindTikTokEvent("emote","EMOTE");
+    bindTikTokEvent("questionNew","QUESTION_NEW");
+    bindTikTokEvent("linkMicBattle","LINK_MIC_BATTLE");
+    bindTikTokEvent("linkMicArmies","LINK_MIC_ARMIES");
+    bindTikTokEvent("liveIntro","LIVE_INTRO");
+    bindTikTokEvent("subscribe","SUBSCRIBE");
+    bindTikTokEvent("envelope","ENVELOPE");
 
     tiktok.on("connected", (state) => {
       console.log("=== TIKTOK CONNECTED ===");
