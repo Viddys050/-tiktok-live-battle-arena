@@ -560,6 +560,12 @@ async function connectTikTok() {
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
       connectWithUniqueId: true,
+      // We resolve the current room ID ourselves with Chromium first.
+      // Do not make the connector perform a second live-status check:
+      // TikTok is currently returning 19881007/user_not_found for some
+      // genuinely active rooms, which can otherwise block the websocket.
+      fetchRoomInfoOnConnect: false,
+      enableExtendedGiftInfo: true,
       logFetchFallbackErrors: true,
       disableEulerFallbacks: false
     });
