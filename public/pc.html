@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TikTok LIVE PC Monitor</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0d1017;color:#fff;font:14px Arial,sans-serif}
+header{height:58px;padding:10px 16px;background:#171b25;display:flex;align-items:center;justify-content:space-between}
+h1{font-size:18px;margin:0}.live{color:#ff4b5c;font-weight:bold}
+main{display:grid;grid-template-columns:1.35fr .65fr;gap:12px;padding:12px;height:calc(100vh - 58px)}
+.card{background:#171b25;border:1px solid #282e3d;border-radius:10px;padding:12px;overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{background:#0f131b;border-radius:8px;padding:10px}.num{font-size:22px;font-weight:bold;margin-top:3px}
+#arena{height:calc(100% - 95px);margin-top:10px;background:radial-gradient(circle at center,#263044 0,#10141d 45%,#090b10 100%);border-radius:10px;position:relative;overflow:hidden}
+.player{position:absolute;width:52px;height:52px;border-radius:50%;background:#38bdf8;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:bold;box-shadow:0 0 15px #000}
+.player small{position:absolute;top:52px;white-space:nowrap;font-size:10px}.host{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:85px;height:85px;border-radius:50%;background:#f59e0b;border:4px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.feed{height:calc(100% - 45px);overflow:auto}.event{padding:8px;border-bottom:1px solid #282e3d}.gift{font-weight:bold}.muted{color:#9aa3b5}
+@media(max-width:800px){main{grid-template-columns:1fr}.card:last-child{display:none}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header><h1>🎮 TikTok LIVE Battle Arena — PC Monitor</h1><div class="live">● LIVE MONITOR</div></header>
+<main>
+<section class="card">
+<div class="stats">
+<div class="stat">👥 Spelers<div class="num" id="players">0</div></div>
+<div class="stat">❤️ Likes<div class="num" id="likes">0</div></div>
+<div class="stat">🎁 Gifts<div class="num" id="gifts">0</div></div>
+<div class="stat">⚔️ Acties<div class="num" id="actions">0</div></div>
+</div>
+<div id="arena"><div class="host">BOSS</div></div>
+</section>
+<section class="card"><h2>💬 Live gebeurtenissen</h2><div id="feed" class="feed"><div class="muted">Wachten op LIVE...</div></div></section>
+</main>
+<script>
+const feed=document.getElementById('feed'), arena=document.getElementById('arena');
+let events=0;
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function render(s){
+ const ps=s.players||{};
+ document.getElementById('players').textContent=Object.keys(ps).length;
+ document.getElementById('likes').textContent=s.totalLikes||0;
+ document.getElementById('gifts').textContent=s.totalGifts||0;
+ document.getElementById('actions').textContent=s.totalActions||0;
+ arena.querySelectorAll('.player').forEach(x=>x.remove());
+ let arr=Object.values(ps).slice(0,60), w=arena.clientWidth-70,h=arena.clientHeight-80;
+ arr.forEach((p,i)=>{
+   let a=i*2.399, r=Math.min(w,h)*.36;
+   let x=w/2+Math.cos(a)*r*(.65+((i%5)/10));
+   let y=h/2+Math.sin(a)*r*(.65+((i%7)/12));
+   let d=document.createElement('div'); d.className='player';
+   d.style.left=Math.max(5,Math.min(w,x))+'px';d.style.top=Math.max(5,Math.min(h,y))+'px';
+   d.innerHTML=esc((p.name||'?').slice(0,2)).toUpperCase()+'<small>'+esc(p.name||'')+' · LV '+(p.level||1)+'</small>';
+   arena.appendChild(d);
+ });
+}
+function addEvent(e){
+ const d=document.createElement('div');d.className='event';
+ d.innerHTML='<b>'+esc(e.type||'EVENT')+'</b> '+esc(e.user||'')+' '+esc(e.text||'');
+ feed.prepend(d);events++;while(feed.children.length>80)feed.lastChild.remove();
+}
+async function poll(){
+ try{
+  const r=await fetch('/api/state',{cache:'no-store'}); if(!r.ok)return;
+  const s=await r.json();render(s);
+  if(Array.isArray(s.events))s.events.slice(-5).forEach(e=>addEvent(e));
+ }catch(e){}
+}
+poll();setInterval(poll,1000);
+</script>
+</body></html>

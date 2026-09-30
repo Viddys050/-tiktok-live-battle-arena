@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080b12">
+<link rel="manifest" href="/manifest.json">
+<title>LIVE Battle Arena</title>
+<style>
+:root{--bg:#070a11;--panel:rgba(8,12,21,.86);--line:rgba(255,255,255,.13);--text:#fff;--muted:#aab3c3;--red:#ff416c;--blue:#36a8ff;--gold:#ffd166}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;background:#000;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100%;overflow:hidden}
+body{display:flex;justify-content:center}.app{position:relative;width:min(100vw,480px);height:100dvh;overflow:hidden;background:radial-gradient(circle at 50% 25%,#25334b 0,#0e1725 35%,#05070c 78%);isolation:isolate}
+.app:before{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(180deg,rgba(18,30,54,.9),transparent 32%,rgba(0,0,0,.78)),repeating-linear-gradient(90deg,transparent 0 39px,rgba(255,255,255,.018) 40px 41px)}
+.arena{position:absolute;left:5%;right:5%;top:17%;bottom:18%;border:1px solid rgba(255,255,255,.13);border-radius:34px;box-shadow:inset 0 0 70px rgba(0,0,0,.75),0 0 50px rgba(74,128,255,.08);overflow:hidden}
+.arena:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(89,156,255,.14),transparent 35%),linear-gradient(135deg,rgba(255,70,110,.06),transparent 35%,rgba(54,168,255,.08));}
+.grid{position:absolute;inset:0;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:36px 36px;transform:perspective(300px) rotateX(55deg) scale(1.7);transform-origin:bottom}
+.top{position:absolute;top:env(safe-area-inset-top);left:0;right:0;padding:10px 12px 0;z-index:10}.bar{display:flex;gap:7px;align-items:center}.live{background:#ff1744;border-radius:8px;padding:5px 8px;font-weight:900;font-size:11px;letter-spacing:.8px}.status{font-size:10px;color:#c8d0df;background:rgba(0,0,0,.45);padding:5px 8px;border-radius:8px}.round{margin-left:auto;font-size:11px;font-weight:800;background:rgba(0,0,0,.48);padding:5px 8px;border-radius:8px}
+.scorebar{margin-top:7px;display:grid;grid-template-columns:1fr 72px 1fr;gap:5px;align-items:center}.score{padding:7px 9px;border-radius:10px;background:var(--panel);font-weight:900;font-size:14px}.score.red{border:1px solid rgba(255,65,108,.45);text-align:left}.score.blue{border:1px solid rgba(54,168,255,.45);text-align:right}.timer{background:rgba(0,0,0,.6);border:1px solid var(--line);border-radius:10px;text-align:center;padding:7px 2px;font-size:13px;font-weight:900}
+.instructions{position:absolute;z-index:12;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 9px);background:rgba(5,8,14,.88);border:1px solid rgba(255,255,255,.13);border-radius:16px;padding:9px 10px;box-shadow:0 8px 35px rgba(0,0,0,.4);backdrop-filter:blur(12px)}.instruction-title{font-size:10px;font-weight:900;letter-spacing:1px;color:var(--gold);margin-bottom:5px}.instructions-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:10px;color:#e9edf5}.instructions-grid b{color:#fff}.giftline{color:#ffe4a0}
+.feed{position:absolute;z-index:9;left:10px;right:10px;top:96px;pointer-events:none;display:flex;flex-direction:column;gap:4px}.event{align-self:flex-start;max-width:92%;font-size:10px;padding:4px 7px;border-radius:8px;background:rgba(0,0,0,.46);backdrop-filter:blur(6px);animation:in .2s ease-out}.event.gift{border-left:2px solid #ffd166}.event.attack,.event.boss{border-left:2px solid #ff416c}.event.shield{border-left:2px solid #36a8ff}.event.chat{opacity:.8}@keyframes in{from{transform:translateY(5px);opacity:0}to{transform:none;opacity:1}}
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#fff,#ffd166 16%,#ff7b39 38%,#ff315f 65%,#42182a);box-shadow:0 0 0 4px rgba(255,209,102,.12),0 0 35px rgba(255,80,100,.5);font-size:30px}.center small{position:absolute;top:79px;font-size:8px;white-space:nowrap;color:#dfe6f4;font-weight:800}
+.player{position:absolute;width:52px;height:52px;border-radius:50%;transform:translate(-50%,-50%);z-index:4;transition:left .6s ease,top .6s ease,transform .2s}.orb{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;font-size:19px;font-weight:1000;border:2px solid rgba(255,255,255,.5);box-shadow:0 5px 15px rgba(0,0,0,.35)}.red .orb{background:radial-gradient(circle at 35% 28%,#fff,#ff7b8f 12%,#ff416c 42%,#69172c)}.blue .orb{background:radial-gradient(circle at 35% 28%,#fff,#8bd1ff 12%,#36a8ff 42%,#103a69)}.pname{position:absolute;left:50%;top:55px;transform:translateX(-50%);font-size:8px;font-weight:900;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000}.lvl{position:absolute;right:-3px;top:-5px;background:#101521;border:1px solid #fff4;border-radius:6px;padding:1px 4px;font-size:7px;font-weight:900}.hp{position:absolute;left:50%;top:-8px;transform:translateX(-50%);width:48px;height:4px;background:#0008;border-radius:5px;overflow:hidden}.hp i{display:block;height:100%;background:#61e294}.energy{position:absolute;left:50%;top:60px;transform:translateX(-50%);font-size:7px;color:#ffd166;white-space:nowrap}.hit{animation:hit .3s ease}@keyframes hit{50%{transform:translate(-50%,-50%) scale(1.35) rotate(7deg)}}
+.attackFX{position:absolute;z-index:7;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 0 12px 7px #ff416c;pointer-events:none;animation:fly .55s linear forwards}@keyframes fly{from{transform:translate(var(--x1),var(--y1)) scale(1)}to{transform:translate(var(--x2),var(--y2)) scale(.2);opacity:.1}}
+.flash{position:absolute;inset:0;z-index:20;pointer-events:none;background:rgba(255,255,255,.85);animation:flash .3s ease-out forwards;display:none}@keyframes flash{to{opacity:0}}
+.leader{position:absolute;z-index:8;right:10px;top:100px;width:110px;background:rgba(0,0,0,.35);border:1px solid #fff1;border-radius:11px;padding:6px;backdrop-filter:blur(7px)}.leader h4{font-size:9px;margin:0 0 4px;color:#ffd166}.row{font-size:8px;display:flex;gap:4px;margin:2px 0}.row span:first-child{width:16px;color:#aeb8ca}.row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.row i{font-style:normal;color:#fff}
+.help{position:absolute;z-index:30;left:10px;bottom:120px;background:#fff;color:#111;border:0;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:900;box-shadow:0 4px 15px #0006}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="bar"><span class="live">● LIVE</span><span class="status" id="status">DEMO</span><span class="round" id="round">RONDE 1</span></div>
+    <div class="scorebar"><div class="score red">🔴 <span id="redScore">0</span></div><div class="timer" id="timer">2:00</div><div class="score blue"><span id="blueScore">0</span> 🔵</div></div>
+  </div>
+  <div class="feed" id="feed"></div>
+  <div class="arena" id="arena"><div class="grid"></div><div class="center">⚔️<small>LIVE BATTLE</small></div></div>
+  <div class="leader"><h4>🏆 TOP 5</h4><div id="leaderRows"></div></div>
+  <div class="instructions">
+    <div class="instruction-title">⚔️ SPEEL MEE — DOE DIT IN DE LIVE CHAT</div>
+    <div class="instructions-grid">
+      <div>💬 <b>JOIN</b> → meedoen</div>
+      <div>💬 <b>AANVAL</b> → aanval</div>
+      <div>💬 <b>SHIELD</b> → schild</div>
+      <div>💬 <b>RAGE</b> → power</div>
+      <div>💬 <b>BOSS</b> → 70 energie</div>
+      <div class="giftline">🎁 Gifts → speciale aanval</div>
+      <div>❤️ Likes → energie</div>
+      <div>🔥 Combo → meer schade</div>
+    </div>
+  </div>
+  <div class="flash" id="flash"></div>
+</div>
+<script>
+const app=document.getElementById("app"), arena=document.getElementById("arena");
+const els={status:document.getElementById("status"),round:document.getElementById("round"),timer:document.getElementById("timer"),red:document.getElementById("redScore"),blue:document.getElementById("blueScore"),feed:document.getElementById("feed"),rows:document.getElementById("leaderRows"),flash:document.getElementById("flash")};
+let state=null, nodes=new Map(), lastEvents=new Set();
+
+function wsUrl(){return (location.protocol==="https:"?"wss://":"ws://")+location.host}
+let ws;
+function connect(){ws=new WebSocket(wsUrl());ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==="state")render(m);if(m.type==="feed")addFeed(m.item);if(m.type==="action")action(m)}catch{}};ws.onclose=()=>setTimeout(connect,1500)}
+connect();
+
+function render(s){
+ state=s; els.status.textContent=s.tiktokStatus==="connected"?"TIKTOK LIVE":s.tiktokStatus.toUpperCase();
+ els.round.textContent=`RONDE ${s.round}`;
+ const left=Math.max(0,s.remaining||0); els.timer.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}`;
+ let rs=0,bs=0;for(const p of s.players){if(p.team==="red")rs+=p.score;else bs+=p.score}
+ els.red.textContent=rs.toLocaleString();els.blue.textContent=bs.toLocaleString();
+ s.players.forEach(p=>upsert(p));
+ for(const [id,node] of nodes){if(!s.players.find(p=>p.id==id)){node.remove();nodes.delete(id)}}
+ els.rows.innerHTML=s.players.slice(0,5).map((p,i)=>`<div class="row"><span>${i+1}</span><b>${escapeHtml(p.name)}</b><i>${p.score}</i></div>`).join("");
+ (s.feed||[]).slice(0,8).reverse().forEach(addFeed);
+}
+function upsert(p){
+ let n=nodes.get(p.id);
+ if(!n){n=document.createElement("div");n.className="player";n.innerHTML=`<div class="orb"></div><div class="hp"><i></i></div><div class="pname"></div><div class="lvl"></div><div class="energy"></div>`;arena.appendChild(n);nodes.set(p.id,n)}
+ n.className=`player ${p.team}`;
+ n.style.left=p.x+"%";n.style.top=p.y+"%";
+ n.querySelector(".orb").textContent=p.team==="red"?"🔥":"❄️";
+ n.querySelector(".pname").textContent=p.name;n.querySelector(".lvl").textContent="L"+p.level;
+ n.querySelector(".hp i").style.width=Math.max(0,p.hp/p.maxHp*100)+"%";
+ n.querySelector(".energy").textContent=`⚡ ${Math.round(p.energy)}`;
+ if(!p.alive)n.style.opacity=.25;else n.style.opacity=1;
+}
+function addFeed(item){
+ if(!item||lastEvents.has(item.id))return;lastEvents.add(item.id);if(lastEvents.size>200)lastEvents=new Set([...lastEvents].slice(-100));
+ const d=document.createElement("div");d.className=`event ${item.type||""}`;d.textContent=item.text;els.feed.appendChild(d);
+ while(els.feed.children.length>6)els.feed.removeChild(els.feed.firstChild);
+ setTimeout(()=>d.remove(),6500);
+}
+function action(m){
+ if(m.action==="boss"){els.flash.style.display="block";setTimeout(()=>els.flash.style.display="none",300)}
+ if(m.action==="attack" && m.from && m.to){const a=nodes.get(m.from),b=nodes.get(m.to);if(a&&b){const fx=document.createElement("div");fx.className="attackFX";const ar=arena.getBoundingClientRect(),aa=a.getBoundingClientRect(),bb=b.getBoundingClientRect();fx.style.setProperty("--x1",(aa.left-ar.left+20)+"px");fx.style.setProperty("--y1",(aa.top-ar.top+20)+"px");fx.style.setProperty("--x2",(bb.left-ar.left+20)+"px");fx.style.setProperty("--y2",(bb.top-ar.top+20)+"px");arena.appendChild(fx);setTimeout(()=>fx.remove(),600)}}
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+setInterval(()=>{if(state)render(state)},1000);
+</script>
+</body>
+</html>

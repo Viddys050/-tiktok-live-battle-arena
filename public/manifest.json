@@ -1,0 +1,10 @@
+{
+  "name": "LIVE Battle Arena",
+  "short_name": "Battle Arena",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#070a11",
+  "theme_color": "#070a11",
+  "icons": []
+}
