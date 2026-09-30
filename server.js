@@ -303,9 +303,11 @@ async function connectTikTok() {
     console.log("Creating TikTokLiveConnection for:", username);
 
     tiktok = new TikTokLiveConnection(username, {
-      processInitialData: false
-    });
-
+  processInitialData: false,
+  connectWithUniqueId: true,
+  logFetchFallbackErrors: true
+});
+    
     tiktok.on("connected", (state) => {
       console.log("=== TIKTOK CONNECTED ===");
       console.log("Room ID:", state?.roomId || "unknown");
