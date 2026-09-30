@@ -275,6 +275,56 @@ function serialize() {
 function broadcastState() { broadcast(serialize()); }
 
 async function getTikTokRoomId(username) {
+  console.log("Trying direct TikTok LIVE page room lookup...");
+  try {
+    const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
+    const pageResponse = await fetch(liveUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+    const html = await pageResponse.text();
+    console.log("TikTok LIVE page HTTP:", pageResponse.status, "bytes:", html.length);
+
+    const directPatterns = [
+      /snssdk\\d*:\\/\\/live\\?room_id=(\\d+)/i,
+      /"roomId"\\s*:\\s*"?(\\d{10,})"?/i,
+      /"room_id"\\s*:\\s*"?(\\d{10,})"?/i
+    ];
+    for (const pattern of directPatterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) {
+        console.log("Found LIVE room ID in page:", match[1]);
+        return String(match[1]);
+      }
+    }
+
+    const scriptPatterns = [
+      /<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\\s\\S]*?)<\\/script>/i,
+      /<script[^>]+id="sigi-persisted-data"[^>]*>([\\s\\S]*?)<\\/script>/i,
+      /<script[^>]+id="SIGI_STATE"[^>]*>([\\s\\S]*?)<\\/script>/i
+    ];
+    for (const pattern of scriptPatterns) {
+      const match = html.match(pattern);
+      if (!match?.[1]) continue;
+      try {
+        const data = JSON.parse(match[1]);
+        const json = JSON.stringify(data);
+        const roomMatch = json.match(/"roomId":"?(\\d{10,})"?/i);
+        if (roomMatch?.[1]) {
+          console.log("Found LIVE room ID in embedded JSON:", roomMatch[1]);
+          return String(roomMatch[1]);
+        }
+      } catch {}
+    }
+
+    console.log("TikTok LIVE page did not expose a room ID.");
+  } catch (err) {
+    console.log("Direct LIVE page lookup failed:", err?.message || err);
+  }
+
   console.log("Trying TikRec signed TikTok room lookup...");
   let signError = null;
 
@@ -410,7 +460,9 @@ async function connectTikTok() {
       disableEulerFallbacks: false
     });
 
-    console.log("Using TikTok connector automatic room lookup (HTML → API → Euler)...");
+    console.log("Finding TikTok LIVE room ID with direct page parser...");
+    const roomId = await getTikTokRoomId(username);
+    console.log("Found LIVE room ID:", roomId);
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
     tiktok.on(WebcastEvent.LIKE, handleLike);
@@ -443,7 +495,7 @@ async function connectTikTok() {
     });
 
     console.log("Calling tiktok.connect(roomId)...");
-    const result = await tiktok.connect();
+    const result = await tiktok.connect(roomId);
 
     console.log("=== TIKTOK CONNECT() RESOLVED ===");
     console.log(result);
