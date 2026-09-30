@@ -63,6 +63,7 @@ let round = 1;
 let roundStarted = Date.now();
 let totalLikes = 0;
 let totalGifts = 0;
+const giftStats = new Map();
 let events = [];
 let nextPlayerId = 1;
 const players = new Map();
@@ -263,6 +264,12 @@ function handleGift(data) {
   const diamond = Number(data.giftDetails?.diamondCount || data.diamondCount || data.extendedGiftInfo?.diamondCount || 0);
   const p = getOrCreate(name, uid);
   totalGifts += count;
+  const giftKey = normalize(giftName);
+  const previousGift = giftStats.get(giftKey) || { name: giftName, count: 0, diamonds: 0 };
+  previousGift.name = giftName;
+  previousGift.count += count;
+  previousGift.diamonds += diamond * count;
+  giftStats.set(giftKey, previousGift);
 
   const finalBattle = getRoundRemaining() <= 10;
   const mapped = Object.entries(config.gifts).find(([needle]) => normalize(giftName).includes(normalize(needle)))?.[1];
@@ -766,11 +773,11 @@ app.post("/api/config", async (req,res) => {
   await connectTikTok();
   res.json({ok:true, config, status:tiktokStatus});
 });
-app.post("/api/reset", (_,res) => { players.clear(); round=1; roundStarted=now(); events=[]; totalLikes=0; totalGifts=0; nextPlayerId=1; pushEvent("🔄 Spel gereset.", "system"); res.json({ok:true}); });
+app.post("/api/reset", (_,res) => { players.clear(); round=1; roundStarted=now(); events=[]; totalLikes=0; totalGifts=0; giftStats.clear(); nextPlayerId=1; pushEvent("🔄 Spel gereset.", "system"); res.json({ok:true}); });
 app.get("/monitor", (_,res) => res.sendFile(path.join(__dirname, "public", "monitor.html")));
 app.post("/api/control", async (req,res) => {
   const action=normalize(req.body?.action);
-  if(action==="reset"){players.clear();round=1;roundStarted=now();events=[];totalLikes=0;totalGifts=0;nextPlayerId=1;pushEvent("🔄 Spel gereset door monitor.","system");}
+  if(action==="reset"){players.clear();round=1;roundStarted=now();events=[];totalLikes=0;totalGifts=0;giftStats.clear();nextPlayerId=1;pushEvent("🔄 Spel gereset door monitor.","system");}
   else if(action==="reconnect"){await connectTikTok();}
   else if(action==="demo"){
     const names=["Luna","Rico","Mila","Daan","Noah","Jay","Sanne","Max","Kai","Nova"];
