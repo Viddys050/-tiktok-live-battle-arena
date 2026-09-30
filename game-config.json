@@ -1,6 +1,6 @@
 {
   "tiktokUsername": "LorenzoLavido",
-"demoMode": false,
+  "demoMode": false,
   "roundSeconds": 120,
   "maxPlayers": 80,
   "commentCooldownMs": 700,
@@ -30,6 +30,18 @@
     ],
     "boss": [
       "boss"
+    ],
+    "boys": [
+      "boys",
+      "boy",
+      "jongens",
+      "mannen"
+    ],
+    "girls": [
+      "girls",
+      "girl",
+      "meiden",
+      "vrouwen"
     ]
   },
   "gifts": {
