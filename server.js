@@ -5,6 +5,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { TikTokLiveConnection, WebcastEvent } from "tiktok-live-connector";
+import { chromium as playwright } from "playwright-core";
+import chromium from "@sparticuz/chromium";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -276,7 +278,86 @@ function serialize() {
 }
 function broadcastState() { broadcast(serialize()); }
 
+async function getTikTokRoomIdWithBrowser(username) {
+  let browser = null;
+  try {
+    console.log("Trying headless Chromium LIVE room discovery...");
+    browser = await playwright.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless
+    });
+
+    const page = await browser.newPage({
+      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true
+    });
+
+    const candidates = new Set();
+
+    const inspect = (value) => {
+      if (!value) return;
+      const text = String(value);
+      const patterns = [
+        /"roomId"\\s*[:=]\\s*"?(\\d{10,})"?/gi,
+        /"room_id"\\s*[:=]\\s*"?(\\d{10,})"?/gi,
+        /roomId\\D{0,20}(\\d{10,})/gi,
+        /room_id\\D{0,20}(\\d{10,})/gi,
+        /roomID\\D{0,20}(\\d{10,})/gi
+      ];
+      for (const re of patterns) {
+        for (const m of text.matchAll(re)) candidates.add(m[1]);
+      }
+    };
+
+    page.on("response", async (response) => {
+      try {
+        const url = response.url();
+        if (!/tiktok\.com/i.test(url)) return;
+        if (!/live|room|webcast|api-live/i.test(url)) return;
+        const body = await response.text();
+        inspect(body);
+      } catch {}
+    });
+
+    const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
+    await page.goto(liveUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForTimeout(5000);
+
+    inspect(await page.content());
+
+    const scriptData = await page.evaluate(() => {
+      const ids = ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"];
+      const out = [];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el?.textContent) out.push(el.textContent);
+      }
+      return out;
+    });
+    for (const item of scriptData) inspect(item);
+
+    if (candidates.size) {
+      const roomId = [...candidates][0];
+      console.log("Found LIVE room ID with headless Chromium:", roomId);
+      return roomId;
+    }
+
+    console.log("Headless Chromium did not expose a LIVE room ID.");
+  } catch (err) {
+    console.log("Headless Chromium room lookup failed:", err?.message || err);
+  } finally {
+    try { await browser?.close(); } catch {}
+  }
+  return null;
+}
+
 async function getTikTokRoomId(username) {
+  const browserRoomId = await getTikTokRoomIdWithBrowser(username);
+  if (browserRoomId) return browserRoomId;
+
   console.log("Trying direct TikTok LIVE page room lookup...");
   try {
     const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
