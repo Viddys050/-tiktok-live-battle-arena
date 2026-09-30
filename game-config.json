@@ -1,6 +1,6 @@
 {
-  "tiktokUsername": "",
-  "demoMode": true,
+  "tiktokUsername": "LorenzoLavido",
+"demoMode": false,
   "roundSeconds": 120,
   "maxPlayers": 80,
   "commentCooldownMs": 700,
