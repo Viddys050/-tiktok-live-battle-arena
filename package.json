@@ -12,6 +12,8 @@
   "dependencies": {
     "express": "^5.1.0",
     "tiktok-live-connector": "2.5.0",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "@sparticuz/chromium": "^148.0.0",
+    "playwright-core": "^1.63.0"
   }
 }
