@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -14,16 +14,34 @@
 .arena{position:absolute;left:5%;right:5%;top:29%;bottom:22%;border:1px solid #fff2;border-radius:30px;overflow:hidden;box-shadow:inset 0 0 80px #000b}.arena:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,50,100,.08),transparent 48%,rgba(70,150,255,.08)),linear-gradient(#fff1 1px,transparent 1px),linear-gradient(90deg,#fff1 1px,transparent 1px);background-size:auto,35px 35px,35px 35px}.mid{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:82px;height:82px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fff,#ffcc65 15%,#ff4b74 48%,#4c2450 75%,transparent 76%);font-size:30px;box-shadow:0 0 35px #ff4b7466}.mid small{position:absolute;top:88px;white-space:nowrap;font-size:8px;color:#cbd0df}
 .player{position:absolute;width:48px;height:48px;transform:translate(-50%,-50%);transition:left .45s ease,top .45s ease}.orb{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;font-size:20px;border:2px solid #fff8;animation:spin 1.5s linear infinite}.player.boys .orb{background:radial-gradient(circle,#fff,#ff4774 40%,#62152b);box-shadow:0 0 18px #ff477466}.player.girls .orb{background:radial-gradient(circle,#fff,#58a9ff 40%,#153d6a);box-shadow:0 0 18px #58a9ff66}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{transform:scale(1.08);box-shadow:0 0 24px #ffd16688}}.name{position:absolute;top:51px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:900;white-space:nowrap;max-width:80px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px #000}.hp{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:44px;height:4px;background:#000a;border-radius:5px}.hp i{display:block;height:100%;background:#61e294}
 .feed{position:absolute;z-index:9;left:10px;right:10px;top:154px;display:flex;flex-direction:column;gap:4px;pointer-events:none}.event{align-self:flex-start;background:#0008;padding:4px 7px;border-radius:8px;font-size:9px;max-width:92%;border-left:2px solid #fff5}
-.instructions{position:absolute;z-index:10;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 8px);background:#070711ee;border:1px solid #fff2;border-radius:16px;padding:10px;backdrop-filter:blur(12px)}.it{font-size:10px;font-weight:1000;color:#ffd166;margin-bottom:6px;text-align:center}.ig{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px}.ig div{background:#fff1;border-radius:7px;padding:5px;text-align:center}.boysT{color:#ff7f9d}.girlsT{color:#8bc7ff}.bigfx{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%) scale(.5);font-size:30px;font-weight:1000;opacity:0;pointer-events:none;text-shadow:0 0 20px currentColor;white-space:nowrap}.show{animation:pop .8s ease-out forwards}@keyframes pop{15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(.9)}}.heart{position:absolute;z-index:25;font-size:22px;animation:heart 1.1s ease-out forwards}@keyframes heart{to{opacity:0;transform:translate(var(--x),-90px) rotate(20deg) scale(1.3)}}.gift{position:absolute;z-index:25;font-size:28px;animation:gift .9s ease-out forwards}@keyframes gift{to{opacity:0;transform:translate(var(--x),-100px) scale(1.4)}}
+.instructions{position:absolute;z-index:10;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 8px);background:#070711ee;border:1px solid #fff2;border-radius:16px;padding:10px;backdrop-filter:blur(12px)}.it{font-size:10px;font-weight:1000;color:#ffd166;margin-bottom:6px;text-align:center}.ig{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px}.ig div{background:#fff1;border-radius:7px;padding:5px;text-align:center}.giftguide{margin-top:7px;background:#0009;border:1px solid #ffd16644;border-radius:10px;padding:7px}.guideTitle{text-align:center;color:#ffd166;font-size:10px;font-weight:1000;margin-bottom:3px}.guideText{text-align:center;color:#bfc4d4;font-size:8px;line-height:1.25;margin-bottom:5px}.giftrow{display:flex;justify-content:space-between;align-items:center;padding:3px 5px;margin-top:2px;border-radius:6px;background:#fff1;font-size:8px}.giftrow b{font-size:7px;color:#ffd166}.giftrow.galaxy{background:#6b45ff22;border:1px solid #9a7cff44}.finalhint{margin-top:5px;text-align:center;color:#ff7f9d;font-size:8px;font-weight:1000}.boysT{color:#ff7f9d}.girlsT{color:#8bc7ff}.bigfx{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%) scale(.5);font-size:30px;font-weight:1000;opacity:0;pointer-events:none;text-shadow:0 0 20px currentColor;white-space:nowrap}.show{animation:pop .8s ease-out forwards}@keyframes pop{15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(.9)}}.heart{position:absolute;z-index:25;font-size:22px;animation:heart 1.1s ease-out forwards}@keyframes heart{to{opacity:0;transform:translate(var(--x),-90px) rotate(20deg) scale(1.3)}}.gift{position:absolute;z-index:25;font-size:28px;animation:gift .9s ease-out forwards}@keyframes gift{to{opacity:0;transform:translate(var(--x),-100px) scale(1.4)}}
 @media(min-width:700px){.app{width:100vw}}
 </style>
 </head>
 <body><div class="app" id="app">
-<div class="top"><span class="live">● LIVE</span><span id="status" class="status">TIKTOK: CONNECTING...</span><div class="title">BOYS ⚡ GIRLS</div><div class="sub">LIKE & GIFT BATTLE</div>
+<div class="top"><span class="live">● LIVE</span><span id="status" class="status">TIKTOK: CONNECTING...</span><div class="title">BOYS ⚡ GIRLS</div><div class="sub">LIKE & GIFT BATTLE • THE BIGGER THE GIFT, THE BIGGER THE ATTACK</div>
 <div class="scores"><div class="team boys">🔴 BOYS<span class="num" id="boys">0</span></div><div class="timer" id="timer">2:00</div><div class="team girls" style="text-align:right">GIRLS 🔵<span class="num" id="girls">0</span></div></div></div>
 <div class="feed" id="feed"></div><div class="bigfx" id="fx"></div>
 <div class="arena" id="arena"><div class="mid">⚡<small>WHO WINS?</small></div></div>
-<div class="instructions"><div class="it">🔥 KIES JOUW TEAM IN DE LIVE CHAT 🔥</div><div class="ig"><div class="boysT">🔴 <b>BOYS</b> = boys team</div><div class="girlsT">🔵 <b>GIRLS</b> = girls team</div><div>❤️ LIKE = team power</div><div>🎁 GIFT = extra power</div></div></div>
+<div class="instructions">
+<div class="it">🔥 CHOOSE YOUR TEAM IN THE LIVE CHAT 🔥</div>
+<div class="ig">
+<div class="boysT">🔴 <b>BOYS</b> = join the Boys</div>
+<div class="girlsT">🔵 <b>GIRLS</b> = join the Girls</div>
+<div>❤️ <b>LIKE</b> = team power</div>
+<div>🎁 <b>GIFT</b> = attack power</div>
+</div>
+<div class="giftguide">
+<div class="guideTitle">🎁 GIFT POWER — EVERY GIFT COUNTS!</div>
+<div class="guideText">The more valuable the gift, the stronger the attack. Save your biggest gifts for the final battle!</div>
+<div class="giftrow"><span>🌹 Rose</span><b>SMALL ATTACK</b></div>
+<div class="giftrow"><span>💗 Finger Heart</span><b>SHIELD</b></div>
+<div class="giftrow"><span>🌸 Perfume</span><b>RAGE BOOST</b></div>
+<div class="giftrow"><span>❤️ Heart Me</span><b>STRONG RAGE</b></div>
+<div class="giftrow galaxy"><span>🌌 Galaxy</span><b>💥 BOSS ATTACK</b></div>
+<div class="finalhint">🔥 LAST 10 SECONDS = FINAL BATTLE • LIKES x3 • GIFTS x2</div>
+</div>
+</div>
 <script>
 const $=id=>document.getElementById(id);let ws,nodes=new Map(),seen=new Set(),state;
 function connect(){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);if(m.type==='feed')feed(m.item);if(m.type==='action')action(m)}catch{}};ws.onclose=()=>setTimeout(connect,1500);ws.onerror=()=>setStatus('error')}
@@ -32,6 +50,6 @@ function render(s){state=s;setStatus(s.tiktokStatus);const final=(s.remaining||0
 function upsert(p){let n=nodes.get(p.id);if(!n){n=document.createElement('div');n.className='player';n.innerHTML='<div class="orb"></div><div class="hp"><i></i></div><div class="name"></div>';$('arena').appendChild(n);nodes.set(p.id,n)}n.className='player '+(p.team==='red'?'boys':'girls');n.style.left=p.x+'%';n.style.top=p.y+'%';n.querySelector('.orb').textContent=p.team==='red'?'🔥':'✨';n.querySelector('.name').textContent=p.name;n.querySelector('.hp i').style.width=Math.max(0,p.hp/p.maxHp*100)+'%';n.style.opacity=p.alive?'1':'.25'}
 function feed(i){if(!i||seen.has(i.id))return;seen.add(i.id);const d=document.createElement('div');d.className='event';d.textContent=i.text;$('feed').appendChild(d);while($('feed').children.length>5)$('feed').firstChild.remove();setTimeout(()=>d.remove(),6000)}
 function fx(t){const e=$('fx');e.textContent=t;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
-function action(m){if(m.action==='like'){for(let i=0;i<Math.min(15,m.count||5);i++){const h=document.createElement('div');h.className='heart';h.textContent='❤';h.style.left=(20+Math.random()*60)+'%';h.style.top=(55+Math.random()*20)+'%';h.style.setProperty('--x',(Math.random()*70-35)+'px');$('arena').appendChild(h);setTimeout(()=>h.remove(),1200)}fx('❤️ LIKE POWER!')}if(m.action==='team')fx(m.team==='red'?'🔴 BOYS!':'🔵 GIRLS!');if(m.action==='attack')fx(m.source==='gift'?'🎁 GIFT POWER!':'⚔️ ATTACK!');if(m.action==='giftPower')fx(m.finalBattle?'🔥 GIFT x2!':'🎁 GIFT POWER!')}
+function action(m){if(m.action==='like'){for(let i=0;i<Math.min(15,m.count||5);i++){const h=document.createElement('div');h.className='heart';h.textContent='❤';h.style.left=(20+Math.random()*60)+'%';h.style.top=(55+Math.random()*20)+'%';h.style.setProperty('--x',(Math.random()*70-35)+'px');$('arena').appendChild(h);setTimeout(()=>h.remove(),1200)}fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE POWER!')}if(m.action==='team')fx(m.team==='red'?'🔴 BOYS!':'🔵 GIRLS!');if(m.action==='attack')fx(m.source==='gift'?'🎁 GIFT POWER!':'⚔️ ATTACK!');if(m.action==='giftPower')fx(m.finalBattle?'🔥 GIFT x2 — FINAL BATTLE!':'🎁 GIFT POWER!')}
 connect();
 </script></div></body></html>
