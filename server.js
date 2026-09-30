@@ -292,7 +292,11 @@ async function getTikTokRoomId(username) {
     if (!response.ok) throw new Error(`TikTok page returned HTTP ${response.status}`);
     const html = await response.text();
     console.log("TikTok LIVE page received:", html.length, "bytes");
-    const match = html.match(/<script id="SIGI_STATE" type="application\\/json">([\\s\\S]*?)<\\/script>/);
+    const markerStart = '<script id="SIGI_STATE" type="application/json">';
+    const markerEnd = "</script>";
+    const start = html.indexOf(markerStart);
+    const end = start >= 0 ? html.indexOf(markerEnd, start + markerStart.length) : -1;
+    const match = start >= 0 && end >= 0 ? [markerStart, html.slice(start + markerStart.length, end)] : null;
     if (!match) throw new Error("TikTok LIVE page did not contain SIGI_STATE");
     const state = JSON.parse(match[1]);
     const info = state?.LiveRoom?.liveRoomUserInfo;
