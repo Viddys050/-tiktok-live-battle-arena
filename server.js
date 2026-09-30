@@ -307,6 +307,11 @@ async function connectTikTok() {
   connectWithUniqueId: true,
   logFetchFallbackErrors: true
 });
+
+    tiktok.on(WebcastEvent.CHAT, handleChat);
+tiktok.on(WebcastEvent.LIKE, handleLike);
+tiktok.on(WebcastEvent.GIFT, handleGift);
+tiktok.on(WebcastEvent.MEMBER, handleMember);
     
     tiktok.on("connected", (state) => {
       console.log("=== TIKTOK CONNECTED ===");
