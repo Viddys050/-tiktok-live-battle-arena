@@ -1,0 +1,42 @@
+{
+  "tiktokUsername": "",
+  "demoMode": true,
+  "roundSeconds": 120,
+  "maxPlayers": 80,
+  "commentCooldownMs": 700,
+  "likeCooldownMs": 350,
+  "commands": {
+    "join": [
+      "join",
+      "meedoen"
+    ],
+    "attack": [
+      "attack",
+      "aanval",
+      "hit",
+      "fire",
+      "vuur"
+    ],
+    "shield": [
+      "shield",
+      "schild",
+      "defend",
+      "verdedig"
+    ],
+    "rage": [
+      "rage",
+      "power",
+      "boost"
+    ],
+    "boss": [
+      "boss"
+    ]
+  },
+  "gifts": {
+    "rose": "attack",
+    "finger heart": "shield",
+    "perfume": "rage",
+    "heart me": "rage",
+    "galaxy": "boss"
+  }
+}
