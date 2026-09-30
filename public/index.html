@@ -152,25 +152,7 @@ fx.style.setProperty("--y2",(bb.top-ar.top+20)+"px");
 arena.appendChild(fx);setTimeout(()=>fx.remove(),600);
 }}}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
-const fullscreenBtn=document.getElementById("fullscreenBtn");
-async function toggleFullscreen(){
-try{
-if(!document.fullscreenElement){
-if(app.requestFullscreen)await app.requestFullscreen();
-else if(app.webkitRequestFullscreen)app.webkitRequestFullscreen();
-}else{
-if(document.exitFullscreen)await document.exitFullscreen();
-else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
 }
-}catch(err){console.log("Fullscreen unavailable",err)}
-}
-fullscreenBtn.addEventListener("click",toggleFullscreen);
-function updateFullscreenButton(){
-const active=!!(document.fullscreenElement||document.webkitFullscreenElement);
-fullscreenBtn.textContent=active?"⛶ EXIT FULLSCREEN":"⛶ FULLSCREEN";
-}
-document.addEventListener("fullscreenchange",updateFullscreenButton);
-document.addEventListener("webkitfullscreenchange",updateFullscreenButton);
 setInterval(()=>{if(state)render(state)},1000);
 </script>
 </body>
