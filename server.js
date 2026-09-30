@@ -69,6 +69,9 @@ const players = new Map();
 const cooldowns = new Map();
 const giftStreaks = new Map();
 
+function getRoundRemaining() {
+  return Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now() - roundStarted) / 1000));
+}
 function now() { return Date.now(); }
 function cleanName(v) {
   return String(v || "Viewer").replace(/[<>]/g, "").slice(0, 22);
@@ -242,12 +245,14 @@ function handleLike(data) {
   const count = Math.max(1, Number(data.likeCount || data.likeCount || 1));
   if (!canDo("like", uid, Number(config.likeCooldownMs || 350))) return;
   const p = getOrCreate(name, uid);
-  p.energy = Math.min(100, p.energy + Math.min(25, count));
-  p.score += Math.min(100, count * 2);
-  addXp(p, Math.min(20, count));
+  const finalBattle = getRoundRemaining() <= 10;
+  const power = finalBattle ? 3 : 1;
+  p.energy = Math.min(100, p.energy + Math.min(25, count) * power);
+  p.score += Math.min(100, count * 2) * power;
+  addXp(p, Math.min(20, count) * power);
   totalLikes += count;
-  broadcast({ type:"action", action:"like", player:p.id, count, name:p.name });
-  pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!`, "like");
+  broadcast({ type:"action", action:"like", player:p.id, count: count * power, name:p.name, finalBattle });
+  pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!${finalBattle?" 🔥 FINAL BATTLE x3!":""}`, "like");
 }
 function handleGift(data) {
   rawTikTokEvent("GIFT", data);
@@ -257,20 +262,30 @@ function handleGift(data) {
   const count = Math.max(1, Number(data.repeatCount || 1));
   const diamond = Number(data.giftDetails?.diamondCount || data.diamondCount || data.extendedGiftInfo?.diamondCount || 0);
   const p = getOrCreate(name, uid);
-  const key = `${uid}:${normalize(giftName)}`;
-  giftStreaks.set(key, { count, last: now() });
   totalGifts += count;
 
+  const finalBattle = getRoundRemaining() <= 10;
   const mapped = Object.entries(config.gifts).find(([needle]) => normalize(giftName).includes(normalize(needle)))?.[1];
-  const strength = Math.min(10, count);
-  if (mapped === "shield") for (let i=0;i<Math.min(3,strength);i++) shield(p);
-  else if (mapped === "rage") rage(p);
-  else if (mapped === "boss") boss(p);
-  else attack(p, Math.max(1, Math.ceil(strength/2)), "gift");
+  const strength = Math.min(10, count + Math.floor(diamond / 10));
+  const multiplier = finalBattle ? 2 : 1;
 
-  p.score += Math.max(10, diamond * 2);
-  addXp(p, Math.max(5, Math.min(80, diamond)));
-  pushEvent(`🎁 ${p.name} → ${giftName} ×${count}`, "gift");
+  if (mapped === "shield") {
+    shield(p);
+    if (finalBattle) shield(p);
+  } else if (mapped === "rage") {
+    rage(p);
+    if (finalBattle) rage(p);
+  } else if (mapped === "boss") {
+    p.energy = 100;
+    boss(p);
+  } else {
+    attack(p, Math.min(10, Math.max(1, Math.ceil(strength / 2) * multiplier)), "gift");
+  }
+
+  p.score += Math.max(10, diamond * 2) * multiplier;
+  addXp(p, Math.max(5, Math.min(80, diamond)) * multiplier);
+  broadcast({ type:"action", action:"giftPower", player:p.id, giftName, diamond, count, finalBattle });
+  pushEvent(`🎁 ${p.name} → ${giftName} ×${count}${finalBattle ? " 🔥 FINAL BATTLE x2!" : ""}`, "gift");
 }
 function handleMember(data) {
   rawTikTokEvent("MEMBER", data);
