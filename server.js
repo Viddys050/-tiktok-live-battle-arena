@@ -275,6 +275,64 @@ function serialize() {
 function broadcastState() { broadcast(serialize()); }
 
 async function getTikTokRoomId(username) {
+  console.log("Trying TikRec signed TikTok room lookup...");
+  let signError = null;
+
+  try {
+    const signUrl = `https://tikrec.com/tiktok/room/api/sign?unique_id=${encodeURIComponent(username)}`;
+    const signResponse = await fetch(signUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+
+    const signText = await signResponse.text();
+    console.log("TikRec signer HTTP:", signResponse.status, "bytes:", signText.length);
+
+    if (!signResponse.ok) throw new Error(`HTTP ${signResponse.status}`);
+
+    const signed = JSON.parse(signText);
+    const signedUrl = signed?.signed_url ||
+      (signed?.signed_path ? `https://www.tiktok.com${signed.signed_path}` : "");
+
+    if (!signedUrl) throw new Error("TikRec returned no signed URL");
+
+    const roomResponse = await fetch(signedUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "application/json,text/plain,*/*",
+        "Referer": "https://www.tiktok.com/",
+        "Origin": "https://www.tiktok.com",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+
+    const roomText = await roomResponse.text();
+    console.log("Signed TikTok room HTTP:", roomResponse.status, "bytes:", roomText.length);
+
+    const data = JSON.parse(roomText);
+    const roomId =
+      data?.data?.room_info?.id ||
+      data?.data?.roomInfo?.roomId ||
+      data?.data?.room_info?.roomId ||
+      data?.data?.user?.roomId ||
+      data?.data?.liveRoom?.roomId ||
+      data?.room_id;
+
+    if (!roomId) {
+      throw new Error(`Signed API returned no room ID (status ${data?.statusCode ?? data?.status_code ?? "unknown"})`);
+    }
+
+    return String(roomId);
+  } catch (err) {
+    signError = err;
+    console.log("TikRec lookup failed:", err?.message || err);
+  }
+
+  console.log("Trying direct TikTok API room lookup as fallback...");
+
   const params = new URLSearchParams({
     aid: "1988",
     app_language: "en",
@@ -295,8 +353,6 @@ async function getTikTokRoomId(username) {
   });
 
   const url = `https://www.tiktok.com/api-live/user/room/?${params.toString()}`;
-  console.log("TikTok API URL:", url.replace(username, "<username>"));
-
   const response = await fetch(url, {
     headers: {
       "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
@@ -308,24 +364,16 @@ async function getTikTokRoomId(username) {
   });
 
   const text = await response.text();
-  console.log("TikTok API HTTP:", response.status, "bytes:", text.length);
-
   let data;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new Error(`TikTok API returned non-JSON HTTP ${response.status}`);
-  }
+  try { data = JSON.parse(text); }
+  catch { throw new Error(`TikTok API returned non-JSON HTTP ${response.status}`); }
 
   if (!response.ok || data?.statusCode) {
-    throw new Error(`TikTok API error HTTP ${response.status}: ${data?.statusCode || ""} ${data?.message || ""}`);
+    throw new Error(`TikTok API error HTTP ${response.status}: ${data?.statusCode || ""} ${data?.message || ""}${signError ? `; signed lookup also failed: ${signError.message}` : ""}`);
   }
 
   const roomId = data?.data?.user?.roomId || data?.data?.liveRoom?.roomId;
-  if (!roomId) {
-    throw new Error("TikTok API returned no LIVE room ID");
-  }
-
+  if (!roomId) throw new Error("TikTok API returned no LIVE room ID");
   return String(roomId);
 }
 
