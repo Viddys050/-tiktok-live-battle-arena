@@ -681,7 +681,7 @@ function connect(){
   }
 }
 
-function setStatus(s.tiktokStatus, s.tiktokError);
+function setStatus(status, errorMessage = ""){
 
   if(status === "connected"){
     els.status.textContent = "TIKTOK LIVE: CONNECTED";
@@ -726,7 +726,7 @@ function render(s){
 
   state = s;
 
-  setStatus(s.tiktokStatus);
+  setStatus(s.tiktokStatus, s.tiktokError);
 
   els.round.textContent = `ROUND ${s.round}`;
 
