@@ -98,7 +98,9 @@ function createPlayer(name, uniqueId="") {
     id, uniqueId: uniqueId || `viewer${id}`, name: cleanName(name),
     team: teamFor(id), level: 1, xp: 0, power: 100, hp: 100, maxHp: 100,
     score: 0, energy: 0, combo: 0, lastSeen: now(), alive: true,
-    x: 10 + Math.random() * 80, y: 17 + Math.random() * 58
+    x: 10 + Math.random() * 80, y: 17 + Math.random() * 58,
+    vx: (Math.random() * 2 - 1) * 0.22, vy: (Math.random() * 2 - 1) * 0.16,
+    angle: Math.random() * 360, spin: (Math.random() * 2 - 1) * 1.8, lastCollision: 0
   };
   players.set(id, player);
   return player;
@@ -270,6 +272,7 @@ function serialize() {
     remaining: Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now()-roundStarted)/1000)),
     totalLikes, totalGifts, tiktokStatus, tiktokError,
     players: list, feed: events.slice(0, 20),
+    metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
     config: {
       commands: config.commands,
       gifts: config.gifts
@@ -612,12 +615,37 @@ function scheduleTikTokReconnect() {
     await connectTikTok();
   }, 30000);
 }
+function updateArenaPhysics() {
+  const active = [...players.values()].filter(p => p.alive);
+  for (const p of active) {
+    p.x += p.vx || 0; p.y += p.vy || 0; p.angle = (p.angle || 0) + (p.spin || 0);
+    if (p.x < 7) { p.x = 7; p.vx = Math.abs(p.vx || 0.12); }
+    if (p.x > 93) { p.x = 93; p.vx = -Math.abs(p.vx || 0.12); }
+    if (p.y < 12) { p.y = 12; p.vy = Math.abs(p.vy || 0.10); }
+    if (p.y > 84) { p.y = 84; p.vy = -Math.abs(p.vy || 0.10); }
+  }
+  for (let i=0;i<active.length;i++) for (let j=i+1;j<active.length;j++) {
+    const a=active[i], b=active[j], dx=b.x-a.x, dy=b.y-a.y, dist=Math.hypot(dx,dy), minDist=10.5;
+    if (dist>0 && dist<minDist) {
+      const nx=dx/dist, ny=dy/dist, overlap=minDist-dist;
+      a.x-=nx*overlap/2; a.y-=ny*overlap/2; b.x+=nx*overlap/2; b.y+=ny*overlap/2;
+      const avx=a.vx||0, avy=a.vy||0, bvx=b.vx||0, bvy=b.vy||0, rel=(bvx-avx)*nx+(bvy-avy)*ny;
+      if(rel<0){a.vx+=nx*rel; a.vy+=ny*rel; b.vx-=nx*rel; b.vy-=ny*rel;}
+      const t=now();
+      if(t-(a.lastCollision||0)>650 || t-(b.lastCollision||0)>650){
+        a.lastCollision=b.lastCollision=t; a.combo=0; b.combo=0; a.score+=3; b.score+=3;
+        broadcast({type:"action",action:"collision",a:a.id,b:b.id});
+        pushEvent("💥 "+a.name+" botst tegen "+b.name+"!","collision");
+      }
+    }
+  }
+}
 function resetRound() {
   round++;
   roundStarted = now();
   for (const p of players.values()) {
     p.hp = p.maxHp; p.alive = true; p.energy = 0; p.combo = 0;
-    p.x = 10 + Math.random() * 80; p.y = 17 + Math.random() * 58;
+    p.x = 10 + Math.random() * 80; p.y = 17 + Math.random() * 58; p.vx=(Math.random()*2-1)*0.22; p.vy=(Math.random()*2-1)*0.16; p.angle=Math.random()*360;
   }
   pushEvent(`🏁 Ronde ${round} begint!`, "round");
   broadcastState();
@@ -639,6 +667,19 @@ app.post("/api/config", async (req,res) => {
   res.json({ok:true, config, status:tiktokStatus});
 });
 app.post("/api/reset", (_,res) => { players.clear(); round=1; roundStarted=now(); events=[]; totalLikes=0; totalGifts=0; nextPlayerId=1; pushEvent("🔄 Spel gereset.", "system"); res.json({ok:true}); });
+app.get("/monitor", (_,res) => res.sendFile(path.join(__dirname, "public", "monitor.html")));
+app.post("/api/control", async (req,res) => {
+  const action=normalize(req.body?.action);
+  if(action==="reset"){players.clear();round=1;roundStarted=now();events=[];totalLikes=0;totalGifts=0;nextPlayerId=1;pushEvent("🔄 Spel gereset door monitor.","system");}
+  else if(action==="reconnect"){await connectTikTok();}
+  else if(action==="demo"){
+    const names=["Luna","Rico","Mila","Daan","Noah","Jay","Sanne","Max","Kai","Nova"];
+    const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
+    const a=req.body?.gameAction||"attack";
+    if(a==="boss"){p.energy=100;boss(p);} else if(a==="like") handleLike({uniqueId:p.uniqueId,nickname:p.name,likeCount:10}); else if(a==="gift") handleGift({uniqueId:p.uniqueId,nickname:p.name,giftName:"Rose",repeatCount:5,diamondCount:1}); else command(p,a);
+  }
+  broadcastState(); res.json({ok:true,status:tiktokStatus});
+});
 app.post("/api/demo", (req,res) => {
   const actions = ["join","attack","shield","rage","boss","like","gift"];
   const action = req.body?.action || actions[Math.floor(Math.random()*actions.length)];
@@ -667,6 +708,7 @@ wss.on("connection", ws => {
 });
 
 setInterval(() => {
+  updateArenaPhysics();
   if (now() - roundStarted >= Number(config.roundSeconds || 120)*1000) resetRound();
   broadcastState();
 }, 1000);
