@@ -821,8 +821,6 @@ els.musicBtn.addEventListener("click",()=>{
   else startMusic();
 });
 
-let ws = null;
-
 function wsUrl(){
   return (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
 }
