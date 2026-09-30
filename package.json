@@ -1,6 +1,6 @@
 {
   "name": "tiktok-live-battle-arena-v2",
-  "version": "2.5.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "express": "^5.1.0",
-    "tiktok-live-connector": "^2.0.2",
+    "tiktok-live-connector": "^2.5.0",
     "ws": "^8.18.3"
   }
 }
