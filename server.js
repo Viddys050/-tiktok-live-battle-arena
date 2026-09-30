@@ -275,47 +275,85 @@ function serialize() {
 function broadcastState() { broadcast(serialize()); }
 
 async function connectTikTok() {
+  console.log("=== TIKTOK CONNECTION START ===");
+  console.log("Username:", config.tiktokUsername);
+
   if (tiktok) {
-    try { await tiktok.disconnect(); } catch {}
+    try {
+      await tiktok.disconnect();
+    } catch {}
     tiktok = null;
   }
+
   const username = String(config.tiktokUsername || "").replace(/^@/, "").trim();
+
   if (!username) {
+    console.log("NO TIKTOK USERNAME");
     tiktokStatus = "demo";
     tiktokError = "";
     broadcastState();
     return;
   }
+
   try {
-    tiktokStatus = "connecting"; tiktokError = "";
+    tiktokStatus = "connecting";
+    tiktokError = "";
     broadcastState();
-    tiktok = new TikTokLiveConnection(username, { processInitialData: false });
-    tiktok.on(WebcastEvent.CHAT, handleChat);
-    tiktok.on(WebcastEvent.GIFT, handleGift);
-    tiktok.on(WebcastEvent.LIKE, handleLike);
-    tiktok.on(WebcastEvent.MEMBER, handleMember);
-    tiktok.on("connected", () => {
-      tiktokStatus = "connected"; tiktokError = "";
-      pushEvent(`🟢 Verbonden met @${username}`, "system");
+
+    console.log("Creating TikTokLiveConnection for:", username);
+
+    tiktok = new TikTokLiveConnection(username, {
+      processInitialData: false
+    });
+
+    tiktok.on("connected", (state) => {
+      console.log("=== TIKTOK CONNECTED ===");
+      console.log("Room ID:", state?.roomId || "unknown");
+
+      tiktokStatus = "connected";
+      tiktokError = "";
+
+      pushEvent(`🟢 Connected to @${username}`, "system");
       broadcastState();
     });
-    tiktok.on("disconnected", () => {
-      tiktokStatus = "offline"; broadcastState();
+
+    tiktok.on("disconnected", (info) => {
+      console.log("=== TIKTOK DISCONNECTED ===");
+      console.log(info || "");
+
+      tiktokStatus = "offline";
+      broadcastState();
     });
+
     tiktok.on("error", (err) => {
-      tiktokStatus = "error"; tiktokError = String(err?.message || err);
-      pushEvent(`🔴 TikTok fout: ${tiktokError}`, "error");
+      console.error("=== TIKTOK ERROR ===");
+      console.error(err);
+
+      tiktokStatus = "error";
+      tiktokError = String(err?.message || err);
+
+      pushEvent(`🔴 TikTok error: ${tiktokError}`, "error");
       broadcastState();
     });
-    await tiktok.connect();
+
+    console.log("Calling tiktok.connect()...");
+
+    const result = await tiktok.connect();
+
+    console.log("=== TIKTOK CONNECT() RESOLVED ===");
+    console.log(result);
+
   } catch (err) {
+    console.error("=== TIKTOK CONNECT FAILED ===");
+    console.error(err);
+
     tiktokStatus = "error";
     tiktokError = String(err?.message || err);
-    pushEvent(`🔴 Verbinden mislukt: ${tiktokError}`, "error");
+
+    pushEvent(`🔴 TikTok connection failed: ${tiktokError}`, "error");
     broadcastState();
   }
 }
-
 function resetRound() {
   round++;
   roundStarted = now();
