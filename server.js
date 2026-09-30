@@ -301,11 +301,11 @@ async function getTikTokRoomIdWithBrowser(username) {
       if (!value) return;
       const text = String(value);
       const patterns = [
-        /"roomId"\\s*[:=]\\s*"?(\\d{10,})"?/gi,
-        /"room_id"\\s*[:=]\\s*"?(\\d{10,})"?/gi,
-        /roomId\\D{0,20}(\\d{10,})/gi,
-        /room_id\\D{0,20}(\\d{10,})/gi,
-        /roomID\\D{0,20}(\\d{10,})/gi
+        /"roomId"\s*[:=]\s*"?(\d{10,})"?/gi,
+        /"room_id"\s*[:=]\s*"?(\d{10,})"?/gi,
+        /roomId\\D{0,20}(\d{10,})/gi,
+        /room_id\\D{0,20}(\d{10,})/gi,
+        /roomID\\D{0,20}(\d{10,})/gi
       ];
       for (const re of patterns) {
         for (const m of text.matchAll(re)) candidates.add(m[1]);
