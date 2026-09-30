@@ -654,8 +654,55 @@ function updateArenaPhysics() {
       const t=now();
       if(t-(a.lastCollision||0)>650 || t-(b.lastCollision||0)>650){
         a.lastCollision=b.lastCollision=t; a.combo=0; b.combo=0; a.score+=3; b.score+=3;
-        broadcast({type:"action",action:"collision",a:a.id,b:b.id});
-        pushEvent("💥 "+a.name+" botst tegen "+b.name+"!","collision");
+
+        // Botsingen tussen vijandelijke teams doen directe HP-schade.
+        // De cooldown voorkomt dat twee spelers meerdere keren per seconde schade oplopen.
+        let damageA = 0, damageB = 0;
+        if (a.team !== b.team) {
+          const impactSpeed = Math.min(2.5, Math.max(0.6, Math.abs(rel)));
+          const collisionDamage = Math.round(6 + impactSpeed * 4);
+          damageA = Math.min(a.hp, collisionDamage);
+          damageB = Math.min(b.hp, collisionDamage);
+          a.hp -= damageA;
+          b.hp -= damageB;
+          a.score += damageB;
+          b.score += damageA;
+
+          if (a.hp <= 0) {
+            a.hp = 0; a.alive = false;
+            pushEvent("☠️ "+a.name+" valt uit door de botsing!","ko");
+            setTimeout(() => {
+              if (players.has(a.id)) {
+                a.hp = a.maxHp; a.alive = true; a.energy = 0;
+                a.x = 10 + Math.random() * 80; a.y = 17 + Math.random() * 58;
+              }
+            }, 5000);
+          }
+          if (b.hp <= 0) {
+            b.hp = 0; b.alive = false;
+            pushEvent("☠️ "+b.name+" valt uit door de botsing!","ko");
+            setTimeout(() => {
+              if (players.has(b.id)) {
+                b.hp = b.maxHp; b.alive = true; b.energy = 0;
+                b.x = 10 + Math.random() * 80; b.y = 17 + Math.random() * 58;
+              }
+            }, 5000);
+          }
+        }
+
+        broadcast({
+          type:"action",
+          action:"collision",
+          a:a.id,
+          b:b.id,
+          damageA,
+          damageB
+        });
+        if (a.team !== b.team) {
+          pushEvent("💥 "+a.name+" botst tegen "+b.name+"! -"+damageA+" HP / -"+damageB+" HP","collision");
+        } else {
+          pushEvent("💥 "+a.name+" botst tegen "+b.name+"!","collision");
+        }
       }
     }
   }
