@@ -151,7 +151,7 @@ function attack(p, strength=1, source="comment") {
   p.combo = Math.min(99, p.combo + 1);
   target.combo = 0;
   pushEvent(`💥 ${p.name} doet ${damage} schade aan ${target.name}!`, "attack");
-  broadcast({ type:"action", action:"attack", from:p.id, to:target.id, strength, source });
+  broadcast({ type:"action", action:"attack", from:p.id, to:target.id, strength, source, damage });
   if (target.hp <= 0) {
     target.hp = 0; target.alive = false;
     p.score += 250;
@@ -170,7 +170,7 @@ function shield(p) {
   p.hp = Math.min(p.maxHp, p.hp + 18);
   p.score += 12;
   addXp(p, 15);
-  broadcast({ type:"action", action:"shield", player:p.id });
+  broadcast({ type:"action", action:"shield", player:p.id, name:p.name });
   pushEvent(`🛡️ ${p.name} activeert SHIELD!`, "shield");
 }
 function rage(p) {
@@ -178,7 +178,7 @@ function rage(p) {
   p.power += 4;
   p.score += 40;
   addXp(p, 25);
-  broadcast({ type:"action", action:"rage", player:p.id });
+  broadcast({ type:"action", action:"rage", player:p.id, name:p.name });
   pushEvent(`⚡ ${p.name} activeert RAGE!`, "rage");
 }
 function boss(p) {
@@ -191,7 +191,7 @@ function boss(p) {
   for (const target of enemies) target.hp = Math.max(1, target.hp - 22);
   p.score += 300;
   addXp(p, 80);
-  broadcast({ type:"action", action:"boss", player:p.id });
+  broadcast({ type:"action", action:"boss", player:p.id, name:p.name });
   pushEvent(`👹 BOSS ATTACK door ${p.name}! ${enemies.length} tegenstanders geraakt!`, "boss");
 }
 function command(p, cmd) {
@@ -227,7 +227,7 @@ function handleLike(data) {
   p.score += Math.min(100, count * 2);
   addXp(p, Math.min(20, count));
   totalLikes += count;
-  broadcast({ type:"action", action:"like", player:p.id, count });
+  broadcast({ type:"action", action:"like", player:p.id, count, name:p.name });
   pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!`, "like");
 }
 function handleGift(data) {
