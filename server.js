@@ -24,7 +24,9 @@ const defaultConfig = {
     attack: ["attack", "aanval", "hit", "fire", "vuur"],
     shield: ["shield", "schild", "defend", "verdedig"],
     rage: ["rage", "power", "boost"],
-    boss: ["boss"]
+    boss: ["boss"],
+    boys: ["boys","boy","jongens","mannen"],
+    girls: ["girls","girl","meiden","vrouwen"]
   },
   gifts: {
     "rose": "attack",
@@ -199,7 +201,17 @@ function boss(p) {
 }
 function command(p, cmd) {
   const c = normalize(cmd);
-  if (config.commands.join.map(normalize).includes(c)) {
+  if (config.commands.boys?.map(normalize).includes(c)) {
+    p.team = "red";
+    p.score += 15; addXp(p, 10);
+    pushEvent(`🔴 ${p.name} kiest BOYS!`, "join");
+    broadcast({ type:"action", action:"team", player:p.id, team:"red", name:p.name });
+  } else if (config.commands.girls?.map(normalize).includes(c)) {
+    p.team = "blue";
+    p.score += 15; addXp(p, 10);
+    pushEvent(`🔵 ${p.name} kiest GIRLS!`, "join");
+    broadcast({ type:"action", action:"team", player:p.id, team:"blue", name:p.name });
+  } else if (config.commands.join.map(normalize).includes(c)) {
     p.score += 25; addXp(p, 20); p.energy = Math.min(100, p.energy + 10);
     pushEvent(`🟢 ${p.name} doet mee aan de arena!`, "join");
   } else if (config.commands.attack.map(normalize).includes(c)) attack(p, 1, "comment");
