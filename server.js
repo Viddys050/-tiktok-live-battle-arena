@@ -52,6 +52,7 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 let tiktok = null;
+let lastRoomId = "";
 let tiktokStatus = "offline";
 let tiktokError = "";
 let reconnectTimer = null;
@@ -209,7 +210,9 @@ function command(p, cmd) {
     p.score += 2; addXp(p, 3);
   }
 }
+function rawTikTokEvent(event, data) { try { broadcast({ type:"rawEvent", event, data }); } catch {} }
 function handleChat(data) {
+  rawTikTokEvent("CHAT", data);
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
   const uid = data.user?.uniqueId || data.uniqueId || name;
   const comment = String(data.comment || "").trim();
@@ -220,6 +223,7 @@ function handleChat(data) {
   command(p, first);
 }
 function handleLike(data) {
+  rawTikTokEvent("LIKE", data);
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
   const uid = data.user?.uniqueId || data.uniqueId || name;
   const count = Math.max(1, Number(data.likeCount || data.likeCount || 1));
@@ -233,6 +237,7 @@ function handleLike(data) {
   pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!`, "like");
 }
 function handleGift(data) {
+  rawTikTokEvent("GIFT", data);
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
   const uid = data.user?.uniqueId || data.uniqueId || name;
   const giftName = String(data.giftDetails?.giftName || data.giftName || data.extendedGiftInfo?.name || "Gift");
@@ -255,6 +260,7 @@ function handleGift(data) {
   pushEvent(`🎁 ${p.name} → ${giftName} ×${count}`, "gift");
 }
 function handleMember(data) {
+  rawTikTokEvent("MEMBER", data);
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
   const uid = data.user?.uniqueId || data.uniqueId || name;
   const p = getOrCreate(name, uid);
@@ -273,6 +279,7 @@ function serialize() {
     totalLikes, totalGifts, tiktokStatus, tiktokError,
     players: list, feed: events.slice(0, 20),
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
+    roomId: lastRoomId,
     config: {
       commands: config.commands,
       gifts: config.gifts
@@ -558,6 +565,7 @@ async function connectTikTok() {
 
     console.log("Finding TikTok LIVE room ID with direct page parser...");
     const roomId = await getTikTokRoomId(username);
+    lastRoomId = String(roomId);
     console.log("Found LIVE room ID:", roomId);
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
@@ -601,7 +609,7 @@ async function connectTikTok() {
     console.error(err);
 
     tiktokStatus = "offline";
-    tiktokError = "Waiting for @${username} to go LIVE";
+    tiktokError = `Waiting for @${username} to go LIVE`;
     console.log("TikTok is currently offline/not discoverable. Will retry automatically.");
     broadcastState();
   } finally {
@@ -694,6 +702,20 @@ app.post("/api/demo", (req,res) => {
   else if (action === "gift") handleGift({ uniqueId:`demo-${name}`, nickname:name, giftName:"Rose", repeatCount:5, diamondCount:1 });
   else command(p, action === "join" ? "join" : "hello");
   res.json({ok:true});
+});
+app.post("/api/player-control", (req,res) => {
+  const id = Number(req.body?.id), p = players.get(id), action = normalize(req.body?.action);
+  if (!p) return res.status(404).json({ok:false,error:"Player not found"});
+  if (action==="attack") attack(p,Number(req.body?.strength)||1,"monitor");
+  else if (action==="shield") shield(p);
+  else if (action==="rage") rage(p);
+  else if (action==="boss") { p.energy=Math.max(70,p.energy); boss(p); }
+  else if (action==="heal") { p.hp=p.maxHp; p.alive=true; pushEvent("💚 "+p.name+" volledig geheeld door monitor.","system"); }
+  else if (action==="energy") { p.energy=100; pushEvent("⚡ Energie van "+p.name+" gevuld.","system"); }
+  else if (action==="randomize") { p.x=10+Math.random()*80; p.y=17+Math.random()*58; pushEvent("📍 "+p.name+" verplaatst.","system"); }
+  else if (action==="remove") { players.delete(p.id); pushEvent("🗑️ "+p.name+" verwijderd door monitor.","system"); }
+  else return res.status(400).json({ok:false,error:"Unknown action"});
+  broadcastState(); res.json({ok:true});
 });
 app.get("/api/health", (_,res)=>res.json({ok:true,status:tiktokStatus,players:players.size}));
 
