@@ -102,11 +102,14 @@ details{border:1px solid #1e2d42;border-radius:10px;background:#080f1a}details s
 <div class="card">
 <h3>🎛️ Control Center</h3>
 <div class="controlGrid">
-<div class="controlBlock"><h4>Game actions</h4><div class="controlButtons">
-<button onclick="demo('join')">JOIN</button><button onclick="demo('attack')">ATTACK</button><button onclick="demo('shield')">SHIELD</button><button onclick="demo('rage')">RAGE</button><button onclick="demo('boss')">BOSS</button>
+<div class="controlBlock"><h4>👥 Team tests</h4><div class="controlButtons">
+<button onclick="demo('boys')">🔴 JOIN BOYS</button><button onclick="demo('girls')">🔵 JOIN GIRLS</button>
 </div></div>
-<div class="controlBlock"><h4>Testing</h4><div class="controlButtons">
-<button onclick="demo('like','red')">❤️ BOYS LIKE</button><button onclick="demo('like','blue')">❤️ GIRLS LIKE</button><button onclick="demo('gift','blue')">🎁 GIFT VISUAL</button><button onclick="post('/api/control',{action:'reset'})">♻️ Reset</button>
+<div class="controlBlock"><h4>❤️ LIVE interaction tests</h4><div class="controlButtons">
+<button onclick="demo('like','red')">❤️ BOYS LIKE</button><button onclick="demo('like','blue')">❤️ GIRLS LIKE</button><button onclick="demo('gift','red')">🎁 BOYS GIFT</button><button onclick="demo('gift','blue')">🎁 GIRLS GIFT</button>
+</div></div>
+<div class="controlBlock"><h4>🎮 Game control</h4><div class="controlButtons">
+<button onclick="post('/api/control',{action:'reset'})">♻️ Reset round</button>
 </div></div>
 <div class="controlBlock"><h4>Music</h4><div class="controlButtons"><button id="musicControl" onclick="toggleBackendMusic()">🔇 Battle Music: OFF</button></div></div>
 <div class="controlBlock"><h4>Connection</h4><div class="controlButtons"><button class="primary" onclick="post('/api/control',{action:'reconnect'})">🔌 Reconnect TikTok</button></div></div>
@@ -281,7 +284,7 @@ function setLiveView(username){
 function openTikTok(){const u=state?.config?.tiktokUsername||'LorenzoLavido';window.open('https://www.tiktok.com/@'+encodeURIComponent(u)+'/live','_blank')}
 function selectPlayer(id){
  selected=id;const p=state?.players?.find(x=>x.id==id);if(!p)return;
- $('inspector').innerHTML='<b style="font-size:17px">'+esc(p.name)+'</b> <span class="'+p.team+'">'+(p.team||'—')+'</span><br><br>HP '+Math.round(p.hp)+' / '+Math.round(p.maxHp)+' · ⚡ '+Math.round(p.energy)+' · Score '+p.score+' · Level '+p.level+' · XP '+p.xp+' · Combo '+p.combo+'<br>❤️ Likes '+(p.likesGiven||0)+' · 🎁 Gifts '+(p.giftsGiven||0)+'<div style="margin-top:8px"><button onclick="pcmd(\'attack\')">⚔️ Attack</button><button onclick="pcmd(\'shield\')">🛡 Shield</button><button onclick="pcmd(\'rage\')">⚡ Rage</button><button onclick="pcmd(\'boss\')">👹 Boss</button><button onclick="pcmd(\'heal\')">💚 Heal</button><button onclick="pcmd(\'energy\')">🔋 Energy</button><button onclick="pcmd(\'randomize\')">📍 Move</button><button class="danger" onclick="pcmd(\'remove\')">🗑 Remove</button></div>';
+ $('inspector').innerHTML='<b style="font-size:17px">'+esc(p.name)+'</b> <span class="'+p.team+'">'+(p.team||'—')+'</span><br><br>Score '+p.score+' · Level '+p.level+' · XP '+p.xp+' · Combo '+p.combo+'<br>❤️ Likes '+(p.likesGiven||0)+' · 🎁 Gifts '+(p.giftsGiven||0)+'<div style="margin-top:8px"><button onclick="pcmd(\'boys\')">🔴 BOYS</button><button onclick="pcmd(\'girls\')">🔵 GIRLS</button><button class="danger" onclick="pcmd(\'remove\')">🗑 Remove viewer</button></div>';
  drawPlayers(state.players||[]);
 }
 async function toggleBackendMusic(){await post('/api/control',{action:'music',enabled:!(state?.musicOn)})}
