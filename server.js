@@ -645,7 +645,9 @@ async function connectTikTok() {
     // This avoids forcing the external uniqueId resolver on every connection.
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
-      logFetchFallbackErrors: true
+      logFetchFallbackErrors: true,
+      webClientOptions: { timeout: 10000 },
+      wsClientOptions: { timeout: 10000 }
     });
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
