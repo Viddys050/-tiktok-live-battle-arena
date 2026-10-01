@@ -641,11 +641,11 @@ async function connectTikTok() {
     tiktokError = "";
     broadcastState();
 
+    // Use the connector's normal username -> LIVE resolution.
+    // This avoids forcing the external uniqueId resolver on every connection.
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
-      connectWithUniqueId: true,
-      logFetchFallbackErrors: true,
-      disableEulerFallbacks: false
+      logFetchFallbackErrors: true
     });
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
@@ -681,6 +681,18 @@ async function connectTikTok() {
       broadcastState();
     });
 
+    tiktok.on("streamEnd", (info) => {
+      console.log("=== TIKTOK STREAM END ===");
+      console.log(info || "");
+      tiktokStatus = "offline";
+      gameActive = false;
+      broadcastState();
+    });
+
+    tiktok.on("websocketConnected", () => {
+      console.log("=== TIKTOK WEBSOCKET CONNECTED ===");
+    });
+
     tiktok.on("disconnected", (info) => {
       console.log("=== TIKTOK DISCONNECTED ===");
       console.log(info || "");
@@ -707,11 +719,31 @@ async function connectTikTok() {
       broadcastState();
     });
 
-    console.log("Calling tiktok.connect(roomId)...");
+    console.log("Calling tiktok.connect()...");
     const result = await tiktok.connect();
 
     console.log("=== TIKTOK CONNECT() RESOLVED ===");
     console.log(result);
+
+    // Some connector versions resolve connect() with the connected state.
+    // Do not depend exclusively on the event emitter to activate the game.
+    if (result?.roomId) lastRoomId = String(result.roomId);
+
+    if (result?.isConnected === true && tiktokStatus !== "connected") {
+      console.log("=== TIKTOK CONNECT RESULT CONFIRMED ===");
+      tiktokStatus = "connected";
+      tiktokError = "";
+      gameActive = true;
+      round++;
+      roundStarted = Date.now();
+      players.clear();
+      totalLikes = 0;
+      totalGifts = 0;
+      giftStats.clear();
+      events = [];
+      pushEvent(`🟢 Connected to @${username} — game is LIVE!`, "system");
+      broadcastState();
+    }
 
   } catch (err) {
     console.error("=== TIKTOK CONNECT FAILED ===");
