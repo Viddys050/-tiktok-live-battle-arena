@@ -648,11 +648,6 @@ async function connectTikTok() {
       disableEulerFallbacks: false
     });
 
-    console.log("Finding TikTok LIVE room ID with direct page parser...");
-    const roomId = await getTikTokRoomId(username);
-    lastRoomId = String(roomId);
-    console.log("Found LIVE room ID:", roomId);
-
     tiktok.on(WebcastEvent.CHAT, handleChat);
     tiktok.on(WebcastEvent.LIKE, handleLike);
     tiktok.on(WebcastEvent.GIFT, handleGift);
@@ -713,7 +708,7 @@ async function connectTikTok() {
     });
 
     console.log("Calling tiktok.connect(roomId)...");
-    const result = await tiktok.connect(roomId);
+    const result = await tiktok.connect();
 
     console.log("=== TIKTOK CONNECT() RESOLVED ===");
     console.log(result);
