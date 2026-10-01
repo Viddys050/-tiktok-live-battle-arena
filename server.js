@@ -63,6 +63,7 @@ let round = 1;
 let roundStarted = Date.now();
 let totalLikes = 0;
 let totalGifts = 0;
+let musicOn = false;
 const giftStats = new Map();
 let events = [];
 let nextPlayerId = 1;
@@ -313,7 +314,7 @@ function serialize() {
     type: "state",
     round, roundSeconds: Number(config.roundSeconds || 120),
     remaining: Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now()-roundStarted)/1000)),
-    totalLikes, totalGifts, tiktokStatus, tiktokError,
+    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError,
     players: list, feed: events.slice(0, 20),
     giftStats: [...giftStats.values()].sort((a,b) => b.count - a.count),
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
@@ -790,6 +791,7 @@ app.post("/api/control", async (req,res) => {
   const action=normalize(req.body?.action);
   if(action==="reset"){players.clear();round=1;roundStarted=now();events=[];totalLikes=0;totalGifts=0;giftStats.clear();nextPlayerId=1;pushEvent("🔄 Spel gereset door monitor.","system");}
   else if(action==="reconnect"){await connectTikTok();}
+  else if(action==="music"){musicOn = typeof req.body?.enabled === "boolean" ? req.body.enabled : !musicOn;broadcast({type:"action",action:"music",enabled:musicOn});}
   else if(action==="demo"){
     const names=["Luna","Rico","Mila","Daan","Noah","Jay","Sanne","Max","Kai","Nova"];
     const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
