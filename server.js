@@ -386,22 +386,12 @@ function serialize() {
 function broadcastState() { broadcast(serialize()); }
 
 async function getTikTokRoomIdWithBrowser(username) {
-  let browser = null;
+  // Reuse the same Chromium instance as the LIVE preview.
+  // Render can reject a second Chromium executable with ETXTBSY, so we must
+  // not launch a separate browser just to discover the room id.
   try {
-    console.log("Trying headless Chromium LIVE room discovery...");
-    browser = await playwright.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless
-    });
-
-    const page = await browser.newPage({
-      userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
-      viewport: { width: 390, height: 844 },
-      isMobile: true,
-      hasTouch: true
-    });
-
+    console.log("Trying shared Chromium LIVE room discovery...");
+    const page = await getLivePreviewPage();
     const candidates = new Set();
 
     const inspect = (value) => {
@@ -422,7 +412,7 @@ async function getTikTokRoomIdWithBrowser(username) {
       }
     };
 
-    page.on("response", async (response) => {
+    const onResponse = async (response) => {
       try {
         const url = response.url();
         if (!/tiktok\.com/i.test(url)) return;
@@ -431,14 +421,19 @@ async function getTikTokRoomIdWithBrowser(username) {
         const body = await response.text();
         inspect(body);
       } catch {}
-    });
+    };
+
+    page.on("response", onResponse);
 
     const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
-    await page.goto(liveUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForTimeout(10000);
+    if (!page.url().includes(`/@${encodeURIComponent(username)}/live`)) {
+      await page.goto(liveUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    } else {
+      await page.reload({ waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
+    }
 
-    console.log("Chromium final URL:", page.url());
-    console.log("Chromium title:", await page.title());
+    await page.waitForTimeout(7000);
+
     inspect(page.url());
     inspect(await page.content());
 
@@ -453,18 +448,17 @@ async function getTikTokRoomIdWithBrowser(username) {
     });
     for (const item of scriptData) inspect(item);
 
+    page.off("response", onResponse);
+
     if (candidates.size) {
       const roomId = [...candidates][0];
-      console.log("Found LIVE room ID with headless Chromium:", roomId);
+      console.log("Found LIVE room ID with shared Chromium:", roomId);
       return roomId;
     }
 
-    console.log("Headless Chromium candidate count:", candidates.size);
-    console.log("Headless Chromium did not expose a LIVE room ID.");
+    console.log("Shared Chromium did not expose a LIVE room ID.");
   } catch (err) {
-    console.log("Headless Chromium room lookup failed:", err?.message || err);
-  } finally {
-    try { await browser?.close(); } catch {}
+    console.log("Shared Chromium room lookup failed:", err?.message || err);
   }
   return null;
 }
