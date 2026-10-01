@@ -317,6 +317,12 @@ function serialize() {
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
     roomId: lastRoomId,
     config: {
+      tiktokUsername: config.tiktokUsername,
+      demoMode: config.demoMode,
+      roundSeconds: config.roundSeconds,
+      maxPlayers: config.maxPlayers,
+      commentCooldownMs: config.commentCooldownMs,
+      likeCooldownMs: config.likeCooldownMs,
       commands: config.commands,
       gifts: config.gifts
     }
@@ -656,8 +662,10 @@ async function connectTikTok() {
     console.error(err);
 
     tiktokStatus = "offline";
-    tiktokError = `Waiting for @${username} to go LIVE`;
-    console.log("TikTok is currently offline/not discoverable. Will retry automatically.");
+    const message = String(err?.message || err || "Unknown TikTok connection error");
+    tiktokError = message.length > 240 ? message.slice(0, 237) + "..." : message;
+    console.log("TikTok connection attempt failed. Will retry automatically.");
+    console.log("Reason:", tiktokError);
     broadcastState();
   } finally {
     reconnectInProgress = false;
@@ -829,12 +837,16 @@ wss.on("connection", ws => {
   });
 });
 
-// Snelle game-loop: beweging en positie worden 20x per seconde doorgestuurd
-// zodat de spelers op telefoon en monitor vloeiend bewegen.
+// Game physics blijft op 20 FPS, maar volledige WebSocket-state gaat op 10 FPS.
+// Dit voorkomt onnodig hoge CPU/bandbreedtebelasting op de Render free tier.
+let lastStateBroadcast = 0;
 setInterval(() => {
   updateArenaPhysics();
   if (now() - roundStarted >= Number(config.roundSeconds || 120)*1000) resetRound();
-  broadcastState();
+  if (now() - lastStateBroadcast >= 100) {
+    lastStateBroadcast = now();
+    broadcastState();
+  }
 }, 50);
 
 server.listen(PORT, async () => {
