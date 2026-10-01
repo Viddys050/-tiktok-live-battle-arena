@@ -392,7 +392,14 @@ async function getTikTokRoomIdWithBrowser(username) {
   // not launch a separate browser just to discover the room id.
   try {
     console.log("Trying shared Chromium LIVE room discovery...");
-    const page = await getLivePreviewPage();
+    const browser = await getLivePreviewBrowser();
+    if (!browser?.isConnected()) throw new Error("Shared Chromium browser is not connected");
+    const page = await browser.newPage({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+      viewport: { width: 960, height: 540 },
+      deviceScaleFactor: 1
+    });
+    if (!page || page.isClosed()) throw new Error("Shared Chromium created no usable page");
     const candidates = new Set();
 
     const inspect = (value) => {
@@ -450,6 +457,7 @@ async function getTikTokRoomIdWithBrowser(username) {
     for (const item of scriptData) inspect(item);
 
     page.off("response", onResponse);
+    await page.close().catch(() => {});
 
     if (candidates.size) {
       const roomId = [...candidates][0];
@@ -986,6 +994,18 @@ async function getLivePreviewPage() {
     livePreviewInitPromise = null;
   });
   return livePreviewInitPromise;
+}
+
+async function getLivePreviewBrowser() {
+  if (livePreviewBrowser?.isConnected()) return livePreviewBrowser;
+  if (livePreviewInitPromise) {
+    await livePreviewInitPromise.catch(() => {});
+    if (livePreviewBrowser?.isConnected()) return livePreviewBrowser;
+  }
+  if (!livePreviewBrowser) {
+    livePreviewBrowser = await launchLivePreviewBrowser();
+  }
+  return livePreviewBrowser;
 }
 app.get("/api/live-preview.jpg", async (_,res) => {
   if (!config.tiktokUsername) return res.status(400).json({ok:false,error:"TikTok username is not configured"});
