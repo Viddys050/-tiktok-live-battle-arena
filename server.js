@@ -1188,7 +1188,14 @@ app.post("/api/control", async (req,res) => {
     } else if(a==="like") {
       broadcast({type:"action",action:"like",player:"test-like",team:req.body?.team==="blue"?"blue":"red",count:1,likeCount:1,name:req.body?.name||"Test Viewer",finalBattle:false});
     } else if(a==="gift") {
-      broadcast({type:"action",action:"giftReceived",player:"test-gift",team:req.body?.team==="red"?"red":"blue",name:req.body?.name||"Test Viewer",giftName:req.body?.giftName||"Rose",count:1});
+      const team = req.body?.team==="blue" ? "blue" : "red";
+      const p = getOrCreate(req.body?.name||"Test Viewer","monitor-gift-"+Date.now());
+      p.team = team;
+      const giftName = req.body?.giftName || "Rose";
+      const rule = findGiftRule(giftName);
+      const effect = rule ? applyGiftEffect(p, rule) : null;
+      broadcast({type:"action",action:"giftReceived",player:p.id,team,name:p.name,giftName,count:1,coins:rule?.coins||0,effect:rule?.effect||null,effectLabel:effect?.label||rule?.label||"visual reaction"});
+      pushEvent(`🎁 ${p.name} sent ${giftName} (test)${rule ? ` → ${rule.label}` : ""}`,"gift");
     } else {
       const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
       if(a==="boss"){p.energy=100;boss(p);} else command(p,a);
@@ -1207,7 +1214,13 @@ app.post("/api/demo", (req,res) => {
   else if (action === "rage") rage(p);
   else if (action === "boss") { p.energy=100; boss(p); }
   else if (action === "like") handleLike({ uniqueId:`demo-${name}`, nickname:name, likeCount:10 });
-  else if (action === "gift") handleGift({ uniqueId:`demo-${name}`, nickname:name, giftName:"Rose", repeatCount:5, diamondCount:1 });
+  else if (action === "gift") {
+    p.team = p.team || (Math.random() < 0.5 ? "red" : "blue");
+    const giftName = req.body?.giftName || "Rose";
+    const rule = findGiftRule(giftName);
+    const effect = rule ? applyGiftEffect(p, rule) : null;
+    broadcast({type:"action",action:"giftReceived",player:p.id,team:p.team,name:p.name,giftName,count:1,coins:rule?.coins||0,effect:rule?.effect||null,effectLabel:effect?.label||rule?.label||"visual reaction"});
+  }
   else command(p, action === "join" ? "join" : "hello");
   res.json({ok:true});
 });
