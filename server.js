@@ -292,7 +292,7 @@ function handleLike(data) {
   addXp(p, Math.min(20, count) * power);
   totalLikes += count;
   p.likesGiven += count;
-  broadcast({ type:"action", action:"like", player:p.id, team:p.team, count: count * power, name:p.name, finalBattle });
+  broadcast({ type:"action", action:"like", player:p.id, team:p.team, count: count * power, likeCount: count, name:p.name, finalBattle });
   pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!${finalBattle?" 🔥 FINAL BATTLE x3!":""}`, "like");
 }
 function handleGift(data) {
