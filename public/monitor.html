@@ -246,6 +246,7 @@ function drawPlayers(ps){
 function drawGiftStats(gs){$('giftstats').innerHTML=gs.length?'<div class="giftitem"><b>Gift</b><b>Count</b><b>Diamonds</b></div>'+gs.map(g=>'<div class="giftitem"><span>🎁 '+esc(g.name)+'</span><b class="value">'+Number(g.count||0).toLocaleString()+'</b><span>'+Number(g.diamonds||0).toLocaleString()+'</span></div>').join(''):'<div class="muted">No gifts received yet.</div>'}
 let livePreviewTimer=null;
 let livePreviewLoading=false;
+let livePreviewUsername='';
 function refreshLivePreview(force=false){
  const img=$('liveview'), overlay=$('liveOverlay'), statusEl=$('livePreviewStatus');
  if(livePreviewLoading && !force)return;
@@ -271,6 +272,8 @@ function refreshLivePreview(force=false){
 }
 function setLiveView(username){
  if(!username)return;
+ if(livePreviewUsername===username)return;
+ livePreviewUsername=username;
  refreshLivePreview(true);
  clearInterval(livePreviewTimer);
  livePreviewTimer=setInterval(()=>refreshLivePreview(false),3000);
