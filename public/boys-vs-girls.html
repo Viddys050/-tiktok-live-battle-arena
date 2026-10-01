@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#09090f">
-<title>BOYS ⚡ GIRLS — TikTok LIVE Battle • LorenzoLavido</title>
+<title>BOYS ⚡ GIRLS — TikTok LIVE Chat Battle • LorenzoLavido</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;overflow:hidden;background:#050509;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .app{position:relative;width:min(100vw,480px);height:100dvh;margin:auto;overflow:hidden;background:radial-gradient(circle at 50% 45%,#252038 0,#0d0d17 38%,#050509 78%)}
@@ -23,7 +23,7 @@
   <div class="loadingBox">
     <div class="loadingLogo">⚡</div>
     <div class="loadingTitle">BOYS VS GIRLS</div>
-    <div class="loadingText">Connecting to the TikTok LIVE battle...</div>
+    <div class="loadingText" id="loadingText">Backend is online. Waiting for the TikTok LIVE connection...</div>
     <div class="loader"></div>
     <div class="loadingStatus" id="loadingStatus">CONNECTING...</div>
   </div>
@@ -47,7 +47,7 @@
     <div class="powerText" id="powerText">THE BATTLE IS ON</div>
   </div>
 </div>
-<div class="supporters"><div class="supportTitle">🏆 TOP SUPPORTERS</div><div class="supportGrid"><div class="supportCol"><div class="supportHead boysT">🔵 BOYS • LIKES</div><div id="boysLikes"></div></div><div class="supportCol"><div class="supportHead girlsT">🩷 GIRLS • LIKES</div><div id="girlsLikes"></div></div><div class="supportCol"><div class="supportHead boysT">🔵 BOYS • GIFTS</div><div id="boysGifts"></div></div><div class="supportCol"><div class="supportHead girlsT">🩷 GIRLS • GIFTS</div><div id="girlsGifts"></div></div></div></div><div id="musicRemote" style="position:absolute;z-index:40;right:10px;top:10px;background:#000b;border:1px solid #fff3;border-radius:10px;padding:6px 9px;font-size:10px;font-weight:900;backdrop-filter:blur(8px)">🔇 MUSIC OFF</div>
+<div class="supporters"><div class="supportTitle">🏆 TOP TEAM PLAYERS</div><div class="supportGrid"><div class="supportCol"><div class="supportHead boysT">🔵 BOYS • LIKES</div><div id="boysLikes"></div></div><div class="supportCol"><div class="supportHead girlsT">🩷 GIRLS • LIKES</div><div id="girlsLikes"></div></div></div></div><div id="musicRemote" style="position:absolute;z-index:40;right:10px;top:10px;background:#000b;border:1px solid #fff3;border-radius:10px;padding:6px 9px;font-size:10px;font-weight:900;backdrop-filter:blur(8px)">🔇 MUSIC OFF</div>
 <div class="instructions">
 <div class="it">🔥 CHOOSE YOUR TEAM IN THE LIVE CHAT 🔥</div>
 <div class="ig">
@@ -56,7 +56,7 @@
 <div>❤️ <b>LIKE</b> = team power</div>
 <div>💬 <b>CHAT</b> = join & interact</div>
 </div>
-<div class="giftguide"><div class="guideTitle">⚡ LIVE BATTLE</div><div class="guideText">Choose your team in chat and take part in the battle.</div><div class="giftrow"><span>🔵 BOYS</span><b>TEAM A</b></div><div class="giftrow"><span>🩷 GIRLS</span><b>TEAM B</b></div><div class="giftrow galaxy"><span>🔥 Final 10 seconds</span><b>FINAL BATTLE</b></div></div>
+<div class="giftguide"><div class="guideTitle">⚡ LIVE BATTLE</div><div class="guideText">Choose your team in chat. Likes drive the score; LIVE Gifts create visual reactions only.</div><div class="giftrow"><span>🔵 BOYS</span><b>TEAM A</b></div><div class="giftrow"><span>🩷 GIRLS</span><b>TEAM B</b></div><div class="giftrow galaxy"><span>🎁 LIVE GIFT</span><b>REACTION</b></div></div>
 </div>
 </div>
 <script>
@@ -79,12 +79,13 @@ function setStatus(s){
   $('gameContent').classList.toggle('gameHidden',!connected);
   $('loadingStatus').textContent=connected?'CONNECTED':'RECONNECTING TO TIKTOK LIVE...';
 }
-function render(s){state=s;window.remoteMusicOn=!!s.musicOn;if(s.musicOn&&audioCtx)startMusic();if(!s.musicOn&&musicOn)stopMusic();setStatus(s.tiktokStatus);const final=(s.remaining||0)<=10;$('timer').classList.toggle('final',final);if(final&&!window.finalShown){window.finalShown=true;fx('🔥 FINAL BATTLE!')}if(!final)window.finalShown=false;let b=0,g=0;s.players.forEach(p=>{if(p.team==='red')b+=p.score;else if(p.team==='blue')g+=p.score});$('boys').textContent=b.toLocaleString();$('girls').textContent=g.toLocaleString();const total=Math.max(1,b+g);const redPct=(b/total)*100;const bluePct=(g/total)*100;$('barRed').style.width=redPct+'%';$('barBlue').style.width=bluePct+'%';$('barRedScore').textContent=b.toLocaleString();$('barBlueScore').textContent=g.toLocaleString();$('powerText').textContent=final?'🔥 FINAL BATTLE':(b===g?'⚡ DEAD EVEN — CHOOSE YOUR TEAM!':b>g?'🔵 BOYS ARE LEADING!':'🩷 GIRLS ARE LEADING!');$('barRed').style.filter=redPct>bluePct?'brightness(1.18)':'brightness(.92)';$('barBlue').style.filter=bluePct>redPct?'brightness(1.18)':'brightness(.92)';const left=Math.max(0,s.remaining||0);$('timer').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');renderSupporters(s.players)}
+function render(s){state=s;window.remoteMusicOn=!!s.musicOn;const err=s.tiktokError?String(s.tiktokError):'';$('loadingText').textContent=s.tiktokStatus==='connecting'?'Connecting to @'+(s.config?.tiktokUsername||'LorenzoLavido')+'…':s.tiktokStatus==='error'?'TikTok connection error: '+err:s.tiktokStatus==='offline'?'Waiting for @'+(s.config?.tiktokUsername||'LorenzoLavido')+' to go LIVE…':'TikTok LIVE connected.';if(s.musicOn&&audioCtx)startMusic();if(!s.musicOn&&musicOn)stopMusic();setStatus(s.tiktokStatus);const final=(s.remaining||0)<=10;$('timer').classList.toggle('final',final);if(final&&!window.finalShown){window.finalShown=true;fx('🔥 FINAL BATTLE!')}if(!final)window.finalShown=false;let b=0,g=0;s.players.forEach(p=>{if(p.team==='red')b+=p.score;else if(p.team==='blue')g+=p.score});$('boys').textContent=b.toLocaleString();$('girls').textContent=g.toLocaleString();const total=Math.max(1,b+g);const redPct=(b/total)*100;const bluePct=(g/total)*100;$('barRed').style.width=redPct+'%';$('barBlue').style.width=bluePct+'%';$('barRedScore').textContent=b.toLocaleString();$('barBlueScore').textContent=g.toLocaleString();$('powerText').textContent=final?'🔥 FINAL BATTLE':(b===g?'⚡ DEAD EVEN — CHOOSE YOUR TEAM!':b>g?'🔵 BOYS ARE LEADING!':'🩷 GIRLS ARE LEADING!');$('barRed').style.filter=redPct>bluePct?'brightness(1.18)':'brightness(.92)';$('barBlue').style.filter=bluePct>redPct?'brightness(1.18)':'brightness(.92)';const left=Math.max(0,s.remaining||0);$('timer').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');renderSupporters(s.players)}
 function renderSupporters(players){const groups={boysLikes:[],girlsLikes:[],boysGifts:[],girlsGifts:[]};for(const p of players){if(p.team!=='red'&&p.team!=='blue')continue;const side=p.team==='red'?'boys':'girls';groups[side+'Likes'].push(p);groups[side+'Gifts'].push(p)}for(const k of Object.keys(groups)){const metric=k.endsWith('Likes')?'likesGiven':'giftsGiven';groups[k].sort((a,b)=>(b[metric]||0)-(a[metric]||0)||b.score-a.score);const el=$(k);el.innerHTML=groups[k].slice(0,3).map((p,i)=>'<div class="supportLine"><b>#'+(i+1)+' '+safeName(p.name)+'</b> '+(p[metric]||0)+'</div>').join('')||'<div class="supportLine">—</div>'}}
 function safeName(v){return String(v||'').replace(/[&<>"']/g,'')}
 function upsert(p){}
 function feed(i){if(!i||seen.has(i.id))return;seen.add(i.id);const d=document.createElement('div');d.className='event';d.textContent=i.text;$('feed').appendChild(d);while($('feed').children.length>5)$('feed').firstChild.remove();setTimeout(()=>d.remove(),6000)}
 function fx(t){const e=$('fx');e.textContent=t;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
-function action(m){if(m.action==='music'){window.remoteMusicOn=!!m.enabled;if(window.remoteMusicOn)startMusic();else stopMusic();return}if(m.action==='like'){for(let i=0;i<Math.min(15,m.count||5);i++){const h=document.createElement('div');h.className='heart';h.textContent='❤';h.style.left=(20+Math.random()*60)+'%';h.style.top=(55+Math.random()*20)+'%';h.style.setProperty('--x',(Math.random()*70-35)+'px');$('arena').appendChild(h);setTimeout(()=>h.remove(),1200)}fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE POWER!')}if(m.action==='team')fx(m.team==='red'?'🔵 BOYS!':'🩷 GIRLS!');if(m.action==='attack')fx(m.source==='gift'?'🎁 GIFT POWER!':'⚔️ ATTACK!');if(m.action==='giftPower')fx(m.finalBattle?'🔥 FINAL BATTLE!':'⚡ BATTLE EFFECT!')}
+function giftVisual(giftName,team,name,count){const n=String(giftName||'Gift').toLowerCase();let icon='🎁';if(n.includes('rose'))icon='🌹';else if(n.includes('heart'))icon='💗';else if(n.includes('perfume'))icon='✨';else if(n.includes('galaxy'))icon='🌌';const side=team==='red'?'🔵':'🩷';fx(side+' '+icon+' '+safeName(name||'Viewer')+' • '+giftName+(count>1?' ×'+count:''));for(let i=0;i<Math.min(10,Math.max(3,Number(count)||1));i++){const e=document.createElement('div');e.className='gift';e.textContent=icon;e.style.left=(25+Math.random()*50)+'%';e.style.top=(55+Math.random()*22)+'%';e.style.setProperty('--x',(Math.random()*90-45)+'px');$('arena').appendChild(e);setTimeout(()=>e.remove(),950)}}
+function action(m){if(m.action==='music'){window.remoteMusicOn=!!m.enabled;if(window.remoteMusicOn)startMusic();else stopMusic();return}if(m.action==='like'){for(let i=0;i<Math.min(15,m.count||5);i++){const h=document.createElement('div');h.className='heart';h.textContent='❤';h.style.left=(20+Math.random()*60)+'%';h.style.top=(55+Math.random()*20)+'%';h.style.setProperty('--x',(Math.random()*70-35)+'px');$('arena').appendChild(h);setTimeout(()=>h.remove(),1200)}fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE POWER!')}if(m.action==='team')fx(m.team==='red'?'🔵 BOYS!':'🩷 GIRLS!');if(m.action==='giftReceived')giftVisual(m.giftName,m.team,m.name,m.count)}
 connect();
 </script></div></body></html>
