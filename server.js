@@ -729,7 +729,11 @@ async function connectTikTok() {
     // Resolve the LIVE room once, then pass the explicit roomId to the connector.
     // This avoids making tiktok-live-connector repeat its own room lookup.
     // It also lets the control room show the exact room we are trying to enter.
-    tiktokConnectStage = "LIVE room found — opening TikTok connection…";\n    broadcastState();\n    const roomId = await getTikTokRoomId(username);\n    tiktokConnectStage = "LIVE room found — opening TikTok connection…";
+    tiktokConnectStage = "Finding LIVE room…";
+    broadcastState();
+    const roomId = await getTikTokRoomId(username);
+    tiktokConnectStage = "LIVE room found — opening TikTok connection…";
+    broadcastState();
     if (!roomId) throw new Error("TikTok is not LIVE or no room ID could be resolved.");
     lastRoomId = String(roomId);
     broadcastState();
