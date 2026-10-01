@@ -669,6 +669,10 @@ async function connectTikTok() {
     // This avoids forcing the external uniqueId resolver on every connection.
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
+      // TikTok can report a freshly discovered LIVE room as "offline" during
+      // the connector's extra room-info check. We already discovered the room
+      // directly from the LIVE page, so do not perform that second live check.
+      fetchRoomInfoOnConnect: false,
       logFetchFallbackErrors: true,
       // Keep connection attempts short. The connector's WebSocket handshake can
       // otherwise wait around 20 seconds before surfacing a failure.
