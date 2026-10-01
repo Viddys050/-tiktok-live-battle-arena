@@ -36,7 +36,10 @@ header b{font-size:16px;letter-spacing:.4px}.headerStatus{font-weight:800}.muted
 .bar{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:42px;height:3px;background:#0009}.bar i{display:block;height:100%;background:var(--green)}
 .controlGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.controlBlock{background:#080f1a;border:1px solid #1e2d42;border-radius:11px;padding:10px}.controlBlock h4{margin:0 0 8px;font-size:11px;color:#b8c6da;text-transform:uppercase;letter-spacing:.7px}
 .controlButtons{display:flex;flex-wrap:wrap;gap:5px}.controlButtons button{margin:0}
-.liveview{width:100%;height:320px;border:0;border-radius:10px;background:#000}
+.liveMonitor{position:relative;width:100%;height:320px;background:#000;border-radius:10px;overflow:hidden;border:1px solid #1e2d42}
+.liveview{display:block;width:100%;height:100%;border:0;border-radius:10px;background:#000;object-fit:cover}
+.liveOverlay{position:absolute;inset:0;display:grid;place-items:center;color:#8998ad;background:linear-gradient(#0008,#0004);font-weight:800;pointer-events:none}
+.liveTools{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.players{height:280px;overflow:auto}.p{display:grid;grid-template-columns:1fr 60px 75px 65px;gap:5px;padding:7px;border-bottom:1px solid #17243a;cursor:pointer;align-items:center}.p:hover{background:#142033}.selected{outline:2px solid var(--yellow);background:#152033}.red{color:#ff6b88}.blue{color:#63b9ff}
 .inspector{min-height:105px}.inspector button{margin:3px 3px 0 0}
 .log{height:300px;overflow:auto;background:#050a12;border-radius:8px;padding:6px}.event{padding:5px;border-bottom:1px solid #152034;font-size:11px;white-space:pre-wrap;word-break:break-word}
@@ -112,8 +115,16 @@ details{border:1px solid #1e2d42;border-radius:10px;background:#080f1a}details s
 
 <div class="card">
 <h3>📺 TikTok LIVE monitor</h3>
-<iframe class="liveview" id="liveview" title="TikTok LIVE"></iframe>
-<div class="note">TikTok may block embedded LIVE playback. The button above opens the real LIVE page when embedding is unavailable.</div>
+<div class="liveMonitor">
+  <img class="liveview" id="liveview" alt="TikTok LIVE monitor">
+  <div class="liveOverlay" id="liveOverlay">⏳ LIVE monitor starten...</div>
+</div>
+<div class="liveTools">
+  <span id="livePreviewStatus" class="muted">Backend preview: verbinden...</span>
+  <button onclick="refreshLivePreview(true)">🔄 Refresh LIVE</button>
+  <button onclick="openTikTok()">↗️ Open TikTok</button>
+</div>
+<div class="note">De monitor gebruikt de backend-browser om de openbare TikTok LIVE-pagina live te bekijken. De game blijft daarnaast via de TikTok LIVE-events verbonden.</div>
 </div>
 </div>
 </section>
@@ -233,7 +244,37 @@ function drawPlayers(ps){
  $('players').innerHTML=ps.map(p=>'<div class="p '+(selected==p.id?'selected':'')+'" onclick="selectPlayer('+p.id+')"><b>'+esc(p.name)+'</b><span class="'+p.team+'">'+(p.team||'—')+'</span><span>'+Math.round(p.hp)+'/'+Math.round(p.maxHp)+'</span><span>'+p.score+'</span></div>').join('')||'<div class="muted" style="padding:10px">No players yet.</div>';
 }
 function drawGiftStats(gs){$('giftstats').innerHTML=gs.length?'<div class="giftitem"><b>Gift</b><b>Count</b><b>Diamonds</b></div>'+gs.map(g=>'<div class="giftitem"><span>🎁 '+esc(g.name)+'</span><b class="value">'+Number(g.count||0).toLocaleString()+'</b><span>'+Number(g.diamonds||0).toLocaleString()+'</span></div>').join(''):'<div class="muted">No gifts received yet.</div>'}
-function setLiveView(username){if(!username)return;const f=$('liveview'),u='https://www.tiktok.com/@'+encodeURIComponent(username)+'/live';if(f.dataset.src!==u){f.dataset.src=u;f.src=u}}
+let livePreviewTimer=null;
+let livePreviewLoading=false;
+function refreshLivePreview(force=false){
+ const img=$('liveview'), overlay=$('liveOverlay'), statusEl=$('livePreviewStatus');
+ if(livePreviewLoading && !force)return;
+ livePreviewLoading=true;
+ if(force) overlay.textContent='⏳ LIVE vernieuwen...';
+ const next='/api/live-preview.jpg?ts='+Date.now();
+ const probe=new Image();
+ probe.onload=()=>{
+   img.src=probe.src;
+   overlay.style.display='none';
+   statusEl.textContent='🟢 LIVE monitor actief';
+   statusEl.className='ok';
+   livePreviewLoading=false;
+ };
+ probe.onerror=()=>{
+   overlay.style.display='grid';
+   overlay.textContent='🔴 LIVE preview niet beschikbaar';
+   statusEl.textContent='🔴 Backend kan TikTok LIVE niet tonen';
+   statusEl.className='bad';
+   livePreviewLoading=false;
+ };
+ probe.src=next;
+}
+function setLiveView(username){
+ if(!username)return;
+ refreshLivePreview(true);
+ clearInterval(livePreviewTimer);
+ livePreviewTimer=setInterval(()=>refreshLivePreview(false),3000);
+}
 function openTikTok(){const u=state?.config?.tiktokUsername||'LorenzoLavido';window.open('https://www.tiktok.com/@'+encodeURIComponent(u)+'/live','_blank')}
 function selectPlayer(id){
  selected=id;const p=state?.players?.find(x=>x.id==id);if(!p)return;
