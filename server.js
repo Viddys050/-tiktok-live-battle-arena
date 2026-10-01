@@ -456,9 +456,10 @@ async function getTikTokRoomIdWithBrowser(username) {
 }
 
 async function getTikTokRoomId(username) {
-  const browserRoomId = await getTikTokRoomIdWithBrowser(username);
-  if (browserRoomId) return browserRoomId;
-
+  // Fast path first: HTTP lookups are much cheaper than starting Chromium.
+  // Chromium is kept as the final fallback because it can take 10+ seconds on Render.
+  console.log("=== ROOM ID LOOKUP START ===");
+  console.log("Account:", "@"+username);
   console.log("Trying direct TikTok LIVE page room lookup...");
   try {
     const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
@@ -721,10 +722,17 @@ async function connectTikTok() {
       broadcastState();
     });
 
-    console.log("Calling tiktok.connect()...");
-    const connectPromise = tiktok.connect();
+    // Resolve the LIVE room once, then pass the explicit roomId to the connector.
+    // This avoids making tiktok-live-connector repeat its own room lookup.
+    // It also lets the control room show the exact room we are trying to enter.
+    const roomId = await getTikTokRoomId(username);
+    if (!roomId) throw new Error("TikTok is not LIVE or no room ID could be resolved.");
+    lastRoomId = String(roomId);
+    broadcastState();
+    console.log("Calling tiktok.connect(roomId):", roomId);
+    const connectPromise = tiktok.connect(roomId);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TikTok connection timed out after 9000ms")), 9000)
+      setTimeout(() => reject(new Error("TikTok WebSocket connection timed out after 15000ms")), 15000)
     );
     const result = await Promise.race([connectPromise, timeoutPromise]);
 
@@ -769,7 +777,7 @@ async function connectTikTok() {
     gameActive = false;
     const message = String(err?.message || err || "Unknown TikTok connection error");
     tiktokError = message.length > 240 ? message.slice(0, 237) + "..." : message;
-    console.log("TikTok connection attempt failed. Will retry automatically in 3 seconds.");
+    console.log("TikTok connection attempt failed. Will retry automatically in 5 seconds.");
     console.log("Reason:", tiktokError);
     broadcastState();
   } finally {
