@@ -313,28 +313,10 @@ function handleGift(data) {
   previousGift.diamonds += diamond * count;
   giftStats.set(giftKey, previousGift);
 
-  const finalBattle = getRoundRemaining() <= 10;
-  const mapped = Object.entries(config.gifts).find(([needle]) => normalize(giftName).includes(normalize(needle)))?.[1];
-  const strength = Math.min(10, count + Math.floor(diamond / 10));
-  const multiplier = finalBattle ? 2 : 1;
-
-  if (mapped === "shield") {
-    shield(p);
-    if (finalBattle) shield(p);
-  } else if (mapped === "rage") {
-    rage(p);
-    if (finalBattle) rage(p);
-  } else if (mapped === "boss") {
-    p.energy = 100;
-    boss(p);
-  } else {
-    attack(p, Math.min(10, Math.max(1, Math.ceil(strength / 2) * multiplier)), "gift");
-  }
-
-  p.score += Math.max(10, diamond * 2) * multiplier;
-  addXp(p, Math.max(5, Math.min(80, diamond)) * multiplier);
-  broadcast({ type:"action", action:"giftPower", player:p.id, giftName, diamond, count, finalBattle });
-  pushEvent(`🎁 ${p.name} → ${giftName} ×${count}${finalBattle ? " 🔥 FINAL BATTLE x2!" : ""}`, "gift");
+  // Gifts are recorded for moderation/statistics only. They no longer give gameplay power,
+  // score, attacks, or other advantages. This avoids making Gifts a gameplay incentive.
+  pushEvent(`🎁 ${p.name} received ${giftName} ×${count}`, "gift");
+  broadcast({ type:"action", action:"giftReceived", player:p.id, giftName, count });
 }
 function handleMember(data) {
   rawTikTokEvent("MEMBER", data);
