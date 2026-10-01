@@ -1,7 +1,7 @@
 {
   "tiktokUsername": "LorenzoLavido",
   "demoMode": false,
-  "roundSeconds": 120,
+  "roundSeconds": 300,
   "maxPlayers": 80,
   "commentCooldownMs": 700,
   "likeCooldownMs": 350,
