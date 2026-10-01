@@ -68,12 +68,12 @@
       "label": "10s SHIELD"
     },
     "heart me": {
-      "coins": 20,
+      "coins": 1,
       "effect": "heal250",
       "label": "+250 HP"
     },
     "galaxy": {
-      "coins": 100,
+      "coins": 1000,
       "effect": "teamheal500",
       "label": "TEAM +500 HP"
     }
