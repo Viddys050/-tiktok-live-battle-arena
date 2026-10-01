@@ -12,26 +12,32 @@
 .top{position:absolute;z-index:10;top:env(safe-area-inset-top);left:10px;right:10px;padding-top:8px}.live{display:inline-block;background:#ff1744;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:900}.status{margin-left:5px;background:#0008;border-radius:8px;padding:5px 8px;font-size:9px}.title{text-align:center;font-size:25px;font-weight:1000;letter-spacing:1px;margin:8px 0 5px;text-shadow:0 0 22px #fff5}.sub{text-align:center;color:#aeb3c4;font-size:9px;font-weight:800}
 .scores{display:grid;grid-template-columns:1fr 58px 1fr;gap:5px;margin-top:10px}.team{padding:9px 7px;border-radius:13px;background:#080812dd;font-size:12px;font-weight:1000}.boys{border:1px solid #398dff;color:#72b6ff}.girls{border:1px solid #ff4774;color:#ff7f9d}.num{font-size:19px;display:block;margin-top:2px}.final{animation:pulse .5s infinite;border-color:#ffd166!important;color:#ffd166}.timer{background:#000b;border:1px solid #fff2;border-radius:13px;display:grid;place-items:center;font-weight:1000;font-size:14px}
 .arena{position:absolute;left:5%;right:5%;top:27%;bottom:calc(env(safe-area-inset-bottom) + 295px);border:1px solid #fff2;border-radius:30px;overflow:hidden;box-shadow:inset 0 0 80px #000b}.arena:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,50,130,.11),transparent 48%,rgba(70,150,255,.11)),linear-gradient(#fff1 1px,transparent 1px),linear-gradient(90deg,#fff1 1px,transparent 1px);background-size:auto,35px 35px,35px 35px}.battle{display:none}.barLabel{position:absolute;top:-34px;font-size:13px;font-weight:1000;letter-spacing:1px}.barLabel.boys{left:0;color:#72b6ff}.barLabel.girls{right:0;color:#ff6f9b}.barTrack{position:absolute;left:0;right:0;top:0;height:82px;border:2px solid #fff2;border-radius:20px;background:#05050b;box-shadow:0 0 35px #000 inset;overflow:hidden}.bar{position:absolute;top:0;height:100%;width:0%;transition:width .7s cubic-bezier(.2,.8,.2,1);will-change:width}.bar.red{left:0;background:linear-gradient(90deg,#398dff,#72b6ff);box-shadow:0 0 30px #398dff88}.bar.blue{right:0;background:linear-gradient(270deg,#ff2f78,#ff6f9b);box-shadow:0 0 30px #ff2f7888}.bar.red:after,.bar.blue:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,#fff7 45%,transparent 65%);animation:sheen 1.8s linear infinite}.clash{position:absolute;left:50%;top:-12px;bottom:-12px;width:4px;transform:translateX(-50%);background:#fff;box-shadow:0 0 18px #fff,0 0 45px #ff4b9a,0 0 45px #4b9aff;z-index:3}.clash:before,.clash:after{content:"";position:absolute;left:50%;top:50%;width:70px;height:70px;border-radius:50%;transform:translate(-50%,-50%) scale(.5);opacity:0;border:2px solid #fff}.clash:before{animation:clashPulse 1.5s infinite}.clash:after{animation:clashPulse 1.5s .75s infinite}.powerText{position:absolute;left:50%;top:94px;transform:translateX(-50%);font-size:10px;font-weight:1000;color:#fff8;white-space:nowrap}.barScore{position:absolute;top:27px;font-size:24px;font-weight:1000;text-shadow:0 0 14px currentColor;z-index:4}.barScore.red{left:14px;color:#fff}.barScore.blue{right:14px;color:#fff}.impact{position:absolute;left:50%;top:41px;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);background:#fff;box-shadow:0 0 12px #fff,0 0 35px #ff4b9a,0 0 35px #4b9aff;opacity:.85;z-index:4;animation:impact .8s ease-out infinite alternate}@keyframes sheen{to{transform:translateX(100%)}}@keyframes clashPulse{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}35%{opacity:.9}100%{transform:translate(-50%,-50%) scale(1.8);opacity:0}}@keyframes impact{to{transform:translate(-50%,-50%) scale(1.7);opacity:.35}}@keyframes pulse{50%{transform:scale(1.08);box-shadow:0 0 24px #ffd16688}}
-.glassBattle{position:absolute;inset:10px 9px 8px;display:grid;grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);gap:7px;align-items:stretch}
-.tankSide{min-width:0;display:flex;flex-direction:column;gap:6px}
-.tankTitle{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 9px;border-radius:10px;background:#070711cc;border:1px solid #fff2;font-size:11px;font-weight:1000;letter-spacing:.6px}
-.tankTitle.boysT{color:#72b6ff;border-color:#398dff66}.tankTitle.girlsT{color:#ff7f9d;border-color:#ff477466}
-.tankCount{font-size:10px;color:#fff9;background:#fff1;border-radius:7px;padding:3px 6px}
-.tankGlass{position:relative;flex:1;min-height:180px;border-radius:22px;border:1px solid #ffffff55;background:linear-gradient(180deg,#ffffff0d,#ffffff03 35%,#0007);box-shadow:inset 0 0 35px #000b,0 0 18px #0008;overflow:hidden;backdrop-filter:blur(8px)}
-.tankGlass:before{content:"";position:absolute;z-index:4;inset:0;background:linear-gradient(115deg,#fff3,transparent 18%,transparent 68%,#fff1);pointer-events:none}
-.tankGlass:after{content:"";position:absolute;z-index:4;left:8px;right:8px;top:7px;height:1px;background:#fff5;box-shadow:0 0 12px #fff8;pointer-events:none}
-.tankFill{position:absolute;z-index:0;left:0;right:0;bottom:0;height:0%;transition:height .45s ease;opacity:.55}
-.tankFill.red{background:linear-gradient(180deg,#398dff22,#398dff88)}.tankFill.blue{background:linear-gradient(180deg,#ff477422,#ff477488)}
-.tankTokens{position:absolute;z-index:3;inset:8px;overflow:hidden}
+.towerBattle{position:absolute;inset:10px 10px 38px;display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr);gap:9px;align-items:end}
+.towerSide{height:100%;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+.towerTeamTitle{display:flex;justify-content:space-between;align-items:center;padding:8px 9px;border-radius:10px 10px 6px 6px;background:#070711e8;border:1px solid #ffffff2d;font-size:11px;font-weight:1000;letter-spacing:.5px;z-index:3}
+.towerBoys .towerTeamTitle{color:#72b6ff;border-color:#398dff66}.towerGirls .towerTeamTitle{color:#ff7f9d;border-color:#ff477466}
+.towerTeamTitle span{color:#fff;background:#fff1;border-radius:7px;padding:3px 6px;font-size:9px}
+.buildZone{height:76%;display:flex;flex-direction:column-reverse;align-items:stretch;gap:4px;padding:7px;border:1px solid #ffffff25;background:linear-gradient(180deg,#ffffff04,#0008);overflow:hidden}
+.towerBoys .buildZone{border-radius:18px 5px 5px 18px}.towerGirls .buildZone{border-radius:5px 18px 18px 5px}
+.buildBlock{height:17px;flex:none;border-radius:4px;border:1px solid #ffffff35;box-shadow:0 2px 8px #0008;animation:blockIn .35s ease-out}
+.towerBoys .buildBlock{background:linear-gradient(90deg,#2878e8,#72b6ff)}.towerGirls .buildBlock{background:linear-gradient(90deg,#ff4774,#ff91ad)}
+.towerCaption{text-align:center;font-size:7px;color:#aeb3c4;font-weight:1000;letter-spacing:1px;padding-top:5px}
+.towerCenter{height:100%;position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.towerCrown{position:absolute;top:0;font-size:27px;z-index:6;filter:drop-shadow(0 0 8px #ffd166)}
+.towerRoof{width:126px;height:30px;background:linear-gradient(135deg,#5b6070,#242733);clip-path:polygon(50% 0,100% 100%,0 100%);border:1px solid #ffffff44;position:relative;z-index:3}
+.towerBody{width:112px;height:68%;min-height:160px;border:2px solid #ffffff45;border-bottom:0;background:linear-gradient(90deg,#171923,#3a3d49 48%,#171923);box-shadow:inset 0 0 25px #000b,0 0 22px #0008;position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:center}
+.towerBody:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 24px,#fff1 25px 26px),linear-gradient(115deg,#fff2,transparent 18%,transparent 75%,#fff1);pointer-events:none}
+.towerBlocks{position:absolute;left:7px;right:7px;bottom:7px;display:flex;flex-direction:column-reverse;gap:3px}
+.centerBlock{height:18px;border-radius:3px;border:1px solid #ffffff44;animation:blockIn .35s ease-out}
+.centerBlock.boys{background:linear-gradient(90deg,#2878e8,#72b6ff)}.centerBlock.girls{background:linear-gradient(90deg,#ff4774,#ff91ad)}
+.towerClash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:9px 7px;border-radius:50%;background:#070711ee;border:1px solid #ffd16666;color:#ffd166;font-size:9px;font-weight:1000;box-shadow:0 0 22px #000}
+.towerBase{width:132px;height:16px;background:#222532;border:1px solid #ffffff44;border-radius:3px;box-shadow:0 5px 15px #000}
+.towerMessage{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);white-space:nowrap;color:#fff9;font-size:7px;font-weight:1000;letter-spacing:.6px;background:#0009;padding:5px 8px;border-radius:8px;border:1px solid #fff2}
+.towerTokens{position:absolute;z-index:5;inset:8px;pointer-events:none;overflow:hidden}
 .token{position:absolute;display:flex;align-items:center;gap:3px;max-width:92%;padding:3px 5px;border-radius:8px;background:#070711dd;border:1px solid #ffffff26;box-shadow:0 3px 12px #0009;font-size:9px;font-weight:900;white-space:nowrap;animation:tokenIn .28s ease-out}
-.token.heartToken{color:#fff;border-color:#ffffff2d}.heartToken .tokenIcon{color:#ff4d87;text-shadow:0 0 9px #ff4d87}
-.token.giftToken{color:#fff;border-color:#ffd16655;background:#15120bdd}.giftToken .tokenIcon{font-size:13px}
-.tokenName{max-width:72px;overflow:hidden;text-overflow:ellipsis}
-.tankFoot{height:18px;text-align:center;color:#aeb3c4;font-size:7px;font-weight:1000;letter-spacing:1px}.tankFoot b{color:#fff;font-size:9px;margin-left:3px}
-.vsCore{align-self:center;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#070711ee;border:1px solid #fff4;box-shadow:0 0 24px #fff2;font-size:9px;font-weight:1000;color:#ffd166;z-index:8}
-.glassHint{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);white-space:nowrap;color:#fff8;font-size:7px;font-weight:900;letter-spacing:.5px}
-@keyframes tokenIn{from{opacity:0;transform:translateY(8px) scale(.7)}to{opacity:1;transform:none}}
-@media(max-height:720px){.arena{bottom:calc(env(safe-area-inset-bottom) + 270px)}.supporters{bottom:calc(env(safe-area-inset-bottom) + 185px)}.instructions{max-height:160px}.tankGlass{min-height:105px}.glassBattle{inset:6px}.glassHint{display:none}.token{font-size:8px}.tokenName{max-width:58px}}
+.token.heartToken{color:#fff;border-color:#ffffff2d}.heartToken .tokenIcon{color:#ff4d87;text-shadow:0 0 9px #ff4d87}.token.giftToken{color:#fff;border-color:#ffd16655;background:#15120bdd}.giftToken .tokenIcon{font-size:13px}.tokenName{max-width:72px;overflow:hidden;text-overflow:ellipsis}
+@keyframes tokenIn{from{opacity:0;transform:translateY(8px) scale(.7)}to{opacity:1;transform:none}}@keyframes blockIn{from{opacity:0;transform:scale(.6) translateY(10px)}to{opacity:1;transform:none}}
+@media(max-height:720px){.arena{bottom:calc(env(safe-area-inset-bottom) + 270px)}.supporters{bottom:calc(env(safe-area-inset-bottom) + 185px)}.instructions{max-height:160px}.towerBattle{inset:6px 6px 34px;grid-template-columns:minmax(0,1fr) 105px minmax(0,1fr);gap:5px}.towerBody{width:78px;min-height:125px}.towerRoof{width:90px}.towerBase{width:98px}.buildZone{height:72%}.buildBlock,.centerBlock{height:13px}.towerCrown{font-size:20px}.towerMessage{font-size:6px}.token{font-size:8px}.tokenName{max-width:58px}}
 
 .feed{position:absolute;z-index:9;left:10px;right:10px;top:154px;display:flex;flex-direction:column;gap:4px;pointer-events:none}.event{align-self:flex-start;background:#0008;padding:4px 7px;border-radius:8px;font-size:9px;max-width:92%;border-left:2px solid #fff5}
 .supporters{position:absolute;z-index:12;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 205px);background:#070711ee;border:1px solid #fff2;border-radius:14px;padding:7px;backdrop-filter:blur(12px);box-shadow:0 8px 30px #0008}.supportTitle{text-align:center;font-size:9px;font-weight:1000;color:#ffd166;letter-spacing:1px;margin-bottom:5px}.supportGrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}.supportCol{background:#fff1;border-radius:8px;padding:5px}.supportHead{font-size:8px;font-weight:1000;margin-bottom:3px}.supportLine{font-size:8px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.supportLine b{font-size:8px}.instructions{position:absolute;z-index:10;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 8px);max-height:180px;overflow:auto;background:#070711ee;border:1px solid #fff2;border-radius:16px;padding:10px;backdrop-filter:blur(12px)}.it{font-size:10px;font-weight:1000;color:#ffd166;margin-bottom:6px;text-align:center}.ig{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px}.ig div{background:#fff1;border-radius:7px;padding:5px;text-align:center}.giftguide{margin-top:7px;background:#0009;border:1px solid #ffd16644;border-radius:10px;padding:7px}.guideTitle{text-align:center;color:#ffd166;font-size:10px;font-weight:1000;margin-bottom:3px}.guideText{text-align:center;color:#bfc4d4;font-size:8px;line-height:1.25;margin-bottom:5px}.giftrow{display:flex;justify-content:space-between;align-items:center;padding:3px 5px;margin-top:2px;border-radius:6px;background:#fff1;font-size:8px}.giftrow b{font-size:7px;color:#ffd166}.giftrow.galaxy{background:#6b45ff22;border:1px solid #9a7cff44}.finalhint{margin-top:5px;text-align:center;color:#ff7f9d;font-size:8px;font-weight:1000}.boysT{color:#72b6ff}.girlsT{color:#ff7f9d}.bigfx{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%) scale(.5);font-size:30px;font-weight:1000;opacity:0;pointer-events:none;text-shadow:0 0 20px currentColor;white-space:nowrap}.show{animation:pop .8s ease-out forwards}@keyframes pop{15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-70%) scale(.9)}}.heart{position:absolute;z-index:25;font-size:22px;pointer-events:none;animation:heartFall 1.7s ease-in forwards}@keyframes heartFall{0%{opacity:0;transform:translate(0,-30px) rotate(-8deg) scale(.7)}12%{opacity:1}100%{opacity:0;transform:translate(var(--x),150px) rotate(22deg) scale(1.25)}}.fallHeart{position:absolute;z-index:24;top:-28px;font-size:20px;pointer-events:none;animation:fallHeart 2.2s linear forwards;text-shadow:0 0 10px #ff4d87}@keyframes fallHeart{0%{opacity:0;transform:translateY(-25px) scale(.6)}10%{opacity:1}90%{opacity:1}100%{opacity:0;transform:translateY(280px) rotate(25deg) scale(1.15)}}.gift{position:absolute;z-index:25;font-size:28px;animation:gift .9s ease-out forwards}@keyframes gift{to{opacity:0;transform:translate(var(--x),-100px) scale(1.4)}}
@@ -54,26 +60,30 @@
 <div class="scores"><div class="team boys">🔵 BOYS<span class="num" id="boys">0</span></div><div class="timer" id="timer">2:00</div><div class="team girls" style="text-align:right">GIRLS 🩷<span class="num" id="girls">0</span></div></div></div>
 <div class="feed" id="feed"></div><div class="bigfx" id="fx"></div>
 <div class="arena" id="arena">
-  <div class="glassBattle">
-    <div class="tankSide">
-      <div class="tankTitle boysT">🔵 BOYS <span class="tankCount" id="boysTankCount">0</span></div>
-      <div class="tankGlass">
-        <div class="tankFill red" id="boysFill"></div>
-        <div class="tankTokens" id="boysTokens"></div>
-      </div>
-      <div class="tankFoot">HEARTS <b id="boysHeartCount">0</b> • REACTIONS <b id="boysGiftCount">0</b></div>
+  <div class="towerBattle">
+    <div class="towerSide towerBoys">
+      <div class="towerTeamTitle">🔵 BOYS <span id="boysTowerScore">0</span></div>
+      <div class="buildZone" id="boysBuild"></div>
+      <div class="towerCaption">BOYS BOUWT</div>
     </div>
-    <div class="vsCore">VS</div>
-    <div class="tankSide">
-      <div class="tankTitle girlsT">GIRLS 🩷 <span class="tankCount" id="girlsTankCount">0</span></div>
-      <div class="tankGlass">
-        <div class="tankFill blue" id="girlsFill"></div>
-        <div class="tankTokens" id="girlsTokens"></div>
+    <div class="towerCenter">
+      <div class="towerCrown">🏆</div>
+      <div class="towerRoof"></div>
+      <div class="towerBody" id="towerBody">
+        <div class="towerBlocks" id="towerBlocks"></div>
+        <div class="towerClash" id="towerClash">VS</div>
       </div>
-      <div class="tankFoot">HEARTS <b id="girlsHeartCount">0</b> • REACTIONS <b id="girlsGiftCount">0</b></div>
+      <div class="towerBase"></div>
+    </div>
+    <div class="towerSide towerGirls">
+      <div class="towerTeamTitle">GIRLS 🩷 <span id="girlsTowerScore">0</span></div>
+      <div class="buildZone" id="girlsBuild"></div>
+      <div class="towerCaption">GIRLS BOUWT</div>
     </div>
   </div>
-  <div class="glassHint">EVERY LIKE = ❤️ WITH YOUR NAME</div>
+  <div class="towerMessage" id="towerMessage">LIKE = BOUWBLOK • GIFTS = SPECIALE ACTIE</div>
+  <div class="towerTokens" id="boysTokens"></div>
+  <div class="towerTokens" id="girlsTokens"></div>
 </div>
 <div class="supporters"><div class="supportTitle">🏆 TOP TEAM PLAYERS</div><div class="supportGrid"><div class="supportCol"><div class="supportHead boysT">🔵 BOYS • LIKES</div><div id="boysLikes"></div></div><div class="supportCol"><div class="supportHead girlsT">🩷 GIRLS • LIKES</div><div id="girlsLikes"></div></div></div></div><div id="musicRemote" style="position:absolute;z-index:40;right:10px;top:10px;background:#000b;border:1px solid #fff3;border-radius:10px;padding:6px 9px;font-size:10px;font-weight:900;backdrop-filter:blur(8px)">🔇 MUSIC OFF</div>
 <div class="instructions">
@@ -122,14 +132,34 @@ function render(s){state=s;window.remoteMusicOn=!!s.musicOn;const err=s.tiktokEr
 function renderSupporters(players){const groups={boysLikes:[],girlsLikes:[]};for(const p of players){if(p.team!=='red'&&p.team!=='blue')continue;const side=p.team==='red'?'boys':'girls';groups[side+'Likes'].push(p)}for(const k of Object.keys(groups)){groups[k].sort((a,b)=>(b.likesGiven||0)-(a.likesGiven||0)||b.score-a.score);const el=$(k);el.innerHTML=groups[k].slice(0,3).map((p,i)=>'<div class="supportLine"><b>#'+(i+1)+' '+safeName(p.name)+'</b> '+(p.likesGiven||0)+'</div>').join('')||'<div class="supportLine">—</div>'}}
 function safeName(v){return String(v||'').replace(/[&<>"']/g,'')}
 function resetTanks(){for(const team of ['red','blue']){tankState[team]={likes:0,gifts:0,tokens:[]};const id=team==='red'?'boysTokens':'girlsTokens';$(id).innerHTML='';}renderTanks()}
-function renderTanks(){for(const team of ['red','blue']){const d=tankState[team];const side=team==='red'?'boys':'girls';const max=Math.max(1,d.tokens.length);const pct=Math.min(86,Math.max(7,d.tokens.length/80*86));$(side+'Fill').style.height=pct+'%';$(side+'TankCount').textContent=d.tokens.length.toLocaleString();$(side+'HeartCount').textContent=d.likes.toLocaleString();$(side+'GiftCount').textContent=d.gifts.toLocaleString();}}
-function addTankToken(team,kind,name,icon,label){if(team!=='red'&&team!=='blue')return;const d=tankState[team];const side=team==='red'?'boys':'girls';const box=$(side+'Tokens');const e=document.createElement('div');e.className='token '+(kind==='gift'?'giftToken':'heartToken');e.innerHTML='<span class="tokenIcon">'+icon+'</span><span class="tokenName">'+safeName(name||'Viewer')+'</span>'+(label?'<span>'+safeName(label)+'</span>':'');e.style.left=(2+Math.random()*70)+'%';e.style.bottom=(3+Math.random()*78)+'%';box.appendChild(e);d.tokens.push(e);while(d.tokens.length>80){const old=d.tokens.shift();old?.remove()}renderTanks()}
+function renderTanks(){
+  const scores={red:0,blue:0};
+  if(state?.players)state.players.forEach(p=>{if(p.team==='red'||p.team==='blue')scores[p.team]+=Number(p.score)||0});
+  for(const team of ['red','blue']){
+    const d=tankState[team], side=team==='red'?'boys':'girls';
+    $(side+'TowerScore').textContent=(scores[team]||0).toLocaleString();
+    const zone=$(team==='red'?'boysBuild':'girlsBuild'); zone.innerHTML='';
+    const blocks=Math.min(18,Math.max(1,Math.floor((scores[team]||0)/100)||0));
+    for(let i=0;i<blocks;i++){const e=document.createElement('div');e.className='buildBlock';zone.appendChild(e)}
+  }
+  renderCentralTower(scores);
+}
+function renderCentralTower(scores){
+  const body=$('towerBlocks');if(!body)return;body.innerHTML='';
+  const total=Math.max(1,(scores.red||0)+(scores.blue||0));
+  const blocks=Math.min(22,Math.max(2,Math.floor(total/100)||0));
+  const redCount=Math.round(blocks*(scores.red||0)/total);
+  for(let i=0;i<blocks;i++){const e=document.createElement('div');e.className='centerBlock '+(i<redCount?'boys':'girls');body.appendChild(e)}
+  const leader=(scores.red||0)===(scores.blue||0)?'VS':((scores.red||0)>(scores.blue||0)?'BOYS':'GIRLS');
+  $('towerClash').textContent=leader;
+  $('towerMessage').textContent=leader==='VS'?'⚔️ GELIJKE STRIJD • BOUW DE TOREN':'⚔️ '+leader+' LIGT VOOROP • BOUW VERDER';
+}
+function addTankToken(team,kind,name,icon,label){if(team!=='red'&&team!=='blue')return;const d=tankState[team];const side=team==='red'?'boys':'girls';const box=$(side+'Tokens');const e=document.createElement('div');e.className='token '+(kind==='gift'?'giftToken':'heartToken');e.innerHTML='<span class="tokenIcon">'+icon+'</span><span class="tokenName">'+safeName(name||'Viewer')+'</span>'+(label?'<span>'+safeName(label)+'</span>':'');e.style.left=(2+Math.random()*42)+'%';e.style.top=(5+Math.random()*45)+'%';box.appendChild(e);d.tokens.push(e);while(d.tokens.length>40){const old=d.tokens.shift();old?.remove()}renderTanks()}
 function addFallingHeart(team,name){const side=team==='red'?'boys':'girls';const box=$(side+'Tokens');const h=document.createElement('div');h.className='fallHeart';h.textContent='❤️';h.title=name||'Viewer';h.style.left=(5+Math.random()*85)+'%';h.style.animationDuration=(1.7+Math.random()*.9)+'s';box.appendChild(h);setTimeout(()=>h.remove(),3000)}
 function addLikeTokens(team,name,count){if(team!=='red'&&team!=='blue')return;const n=Math.max(1,Math.min(12,Number(count)||1));tankState[team].likes+=Number(count)||1;for(let i=0;i<n;i++){addTankToken(team,'like',name,'❤');addFallingHeart(team,name)}renderTanks()}
 function addGiftToken(team,name,giftName,count){
   if(team!=='red'&&team!=='blue')return;
-  const d=tankState[team];
-  d.gifts+=Number(count)||1;
+  const d=tankState[team];d.gifts+=Number(count)||1;
   addTankToken(team,'gift',name,giftIcon(giftName),giftName+(count>1?' ×'+count:''));
   renderTanks();
 }
