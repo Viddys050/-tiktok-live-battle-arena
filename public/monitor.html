@@ -1,60 +1,266 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Battle Arena Control Room</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#060910;color:#eaf0ff;font:13px Arial,sans-serif}header{padding:12px 16px;background:#0e1625;border-bottom:1px solid #24324a;display:flex;gap:12px;align-items:center;position:sticky;top:0;z-index:5}header b{font-size:16px}.ok{color:#61e294}.warn{color:#ffd166}.bad{color:#ff6b7f}.wrap{padding:12px;display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:12px}.card{background:#0d1421;border:1px solid #25334a;border-radius:12px;padding:12px;min-width:0}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}.stat{background:#080e18;border-radius:8px;padding:8px}.big{font-size:19px;font-weight:800;margin-top:3px}.arena{position:relative;height:500px;border-radius:14px;overflow:hidden;background:radial-gradient(circle,#172944,#080d17 70%);border:1px solid #2c3d58}.arena:before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff09 1px,transparent 1px),linear-gradient(90deg,#ffffff09 1px,transparent 1px);background-size:32px 32px}.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px}.orb{position:absolute;width:42px;height:42px;border-radius:50%;transform:translate(-50%,-50%);display:grid;place-items:center;font-size:19px;font-weight:900;border:2px solid #fff8;animation:spin 1.8s linear infinite;z-index:2}.orb.red{background:radial-gradient(circle,#fff,#ff416c 42%,#571326);box-shadow:0 0 18px #ff416c88}.orb.blue{background:radial-gradient(circle,#fff,#36a8ff 42%,#102d4f);box-shadow:0 0 18px #36a8ff88}@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}.pn{position:absolute;top:46px;left:50%;transform:translateX(-50%);font-size:8px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000}.bar{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:42px;height:3px;background:#0009}.bar i{display:block;height:100%;background:#61e294}.hit{position:absolute;z-index:4;font-size:25px;animation:pop .6s ease-out forwards}@keyframes pop{0%{opacity:0;transform:scale(.2)}20%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(.6) translateY(-35px)}}button{background:#1c2a40;color:#fff;border:1px solid #405572;border-radius:7px;padding:7px 9px;margin:3px;cursor:pointer}button:hover{background:#293c58}input,textarea,select{background:#080e18;color:#fff;border:1px solid #344762;border-radius:6px;padding:7px;width:100%}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px}.players{height:220px;overflow:auto}.p{display:grid;grid-template-columns:1fr 55px 75px 60px;gap:4px;padding:6px;border-bottom:1px solid #1c293d;cursor:pointer}.p:hover{background:#172238}.red{color:#ff6b88}.blue{color:#63b9ff}.log{height:290px;overflow:auto;background:#050911;border-radius:7px;padding:6px}.event{padding:5px;border-bottom:1px solid #152034;font-size:11px;white-space:pre-wrap;word-break:break-word}.raw{height:220px;overflow:auto;background:#050911;border-radius:7px;padding:6px;font:10px monospace}.rawline{border-bottom:1px solid #182235;padding:4px}.tabs button.active{background:#365579}.muted{color:#8997ad}.selected{outline:2px solid #ffd166}.danger{background:#5a2030}.wide{width:100%}.giftstats{max-height:300px;overflow:auto}.giftitem{display:grid;grid-template-columns:1fr 70px 80px;gap:6px;padding:7px;border-bottom:1px solid #1c293d;align-items:center}.giftitem b{text-align:right}.giftitem .value{color:#ffd166}.liveview{width:100%;height:300px;border:0;border-radius:10px;background:#000}.note{font-size:11px;color:#8997ad;margin-top:6px}@media(max-width:1050px){.wrap{grid-template-columns:1fr 1fr}.stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.wrap{grid-template-columns:1fr}.arena{height:420px}.stats{grid-template-columns:repeat(2,1fr)}} 
-</style></head>
+*{box-sizing:border-box}
+:root{--bg:#050811;--panel:#0b1220;--panel2:#0f1828;--line:#23334c;--text:#edf3ff;--muted:#8998ad;--green:#5ee39a;--yellow:#ffd166;--red:#ff667d;--blue:#5db7ff;--pink:#ff7da6}
+body{margin:0;background:radial-gradient(circle at 50% -10%,#14243d 0,#050811 42%);color:var(--text);font:13px Arial,sans-serif}
+button,input,textarea,select{font:inherit}
+button{background:#17263b;color:#fff;border:1px solid #38516f;border-radius:8px;padding:8px 11px;cursor:pointer}
+button:hover{background:#223650}
+button.primary{background:#173b31;border-color:#3d8669}.danger{background:#4a1d2a;border-color:#874054}
+input,textarea,select{background:#070d17;color:#fff;border:1px solid #30435d;border-radius:7px;padding:8px;width:100%}
+header{position:sticky;top:0;z-index:20;padding:11px 16px;background:#080e18ee;border-bottom:1px solid #26364f;backdrop-filter:blur(14px);display:flex;gap:12px;align-items:center}
+header b{font-size:16px;letter-spacing:.4px}.headerStatus{font-weight:800}.muted{color:var(--muted)}.ok{color:var(--green)}.warn{color:var(--yellow)}.bad{color:var(--red)}
+.wrap{max-width:1500px;margin:auto;padding:14px;display:grid;gap:12px}
+.card{background:linear-gradient(180deg,#0d1625,#09101c);border:1px solid var(--line);border-radius:14px;padding:13px;min-width:0}
+.card h3{margin:0 0 11px;font-size:14px;letter-spacing:.3px}
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+.connection{display:flex;align-items:center;gap:14px;min-height:112px}
+.connectionIcon{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;font-size:30px;background:#101b2d;border:1px solid #30445f}
+.connectionMain{min-width:0}.connectionState{font-size:25px;font-weight:900}.account{margin-top:4px;font-weight:700}
+.connectionMeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.pill{background:#080e18;border:1px solid #26364d;border-radius:999px;padding:5px 9px;color:#b8c6da;font-size:11px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}.stat{background:#070d17;border:1px solid #1d2b40;border-radius:10px;padding:9px}.label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}.big{font-size:21px;font-weight:900;margin-top:4px}
+.mainGrid{display:grid;grid-template-columns:1.35fr .85fr;gap:12px}
+.arena{position:relative;height:520px;border-radius:13px;overflow:hidden;background:radial-gradient(circle,#172b48,#070c15 72%);border:1px solid #30425d}
+.arena:before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:32px 32px}
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:35px;opacity:.8}
+.orb{position:absolute;width:42px;height:42px;border-radius:50%;transform:translate(-50%,-50%);display:grid;place-items:center;font-size:18px;font-weight:900;border:2px solid #fff8;animation:spin 1.8s linear infinite;z-index:2}
+.orb.red{background:radial-gradient(circle,#fff,#ff416c 42%,#571326);box-shadow:0 0 18px #ff416c88}.orb.blue{background:radial-gradient(circle,#fff,#36a8ff 42%,#102d4f);box-shadow:0 0 18px #36a8ff88}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.pn{position:absolute;top:45px;left:50%;transform:translateX(-50%);font-size:8px;white-space:nowrap;max-width:90px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px #000}
+.bar{position:absolute;top:-7px;left:50%;transform:translateX(-50%);width:42px;height:3px;background:#0009}.bar i{display:block;height:100%;background:var(--green)}
+.controlGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.controlBlock{background:#080f1a;border:1px solid #1e2d42;border-radius:11px;padding:10px}.controlBlock h4{margin:0 0 8px;font-size:11px;color:#b8c6da;text-transform:uppercase;letter-spacing:.7px}
+.controlButtons{display:flex;flex-wrap:wrap;gap:5px}.controlButtons button{margin:0}
+.liveview{width:100%;height:320px;border:0;border-radius:10px;background:#000}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.players{height:280px;overflow:auto}.p{display:grid;grid-template-columns:1fr 60px 75px 65px;gap:5px;padding:7px;border-bottom:1px solid #17243a;cursor:pointer;align-items:center}.p:hover{background:#142033}.selected{outline:2px solid var(--yellow);background:#152033}.red{color:#ff6b88}.blue{color:#63b9ff}
+.inspector{min-height:105px}.inspector button{margin:3px 3px 0 0}
+.log{height:300px;overflow:auto;background:#050a12;border-radius:8px;padding:6px}.event{padding:5px;border-bottom:1px solid #152034;font-size:11px;white-space:pre-wrap;word-break:break-word}
+.raw{height:270px;overflow:auto;background:#050a12;border-radius:8px;padding:6px;font:10px monospace}.rawline{border-bottom:1px solid #182235;padding:4px;word-break:break-word}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}.tabs button{padding:5px 8px}.tabs button.active{background:#365579}
+.giftstats{max-height:310px;overflow:auto}.giftitem{display:grid;grid-template-columns:1fr 70px 80px;gap:6px;padding:7px;border-bottom:1px solid #1c293d;align-items:center}.giftitem b{text-align:right}.value{color:var(--yellow)}
+.settings{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.span2{grid-column:span 2}.note{font-size:11px;color:var(--muted);margin-top:7px}.mapping{max-height:230px;overflow:auto;background:#050a12;padding:8px;border-radius:8px;font:10px monospace;white-space:pre-wrap}
+details{border:1px solid #1e2d42;border-radius:10px;background:#080f1a}details summary{cursor:pointer;padding:10px;font-weight:800}details>div{padding:0 10px 10px}
+@media(max-width:1100px){.hero,.mainGrid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){header{position:static;flex-wrap:wrap}.stats{grid-template-columns:repeat(2,1fr)}.two,.controlGrid,.settings{grid-template-columns:1fr}.span2{grid-column:auto}.arena{height:420px}.actions{margin-left:0;justify-content:flex-start}.connection{align-items:flex-start;flex-wrap:wrap}}
+</style>
+</head>
 <body>
-<header><b>⚔️ BATTLE ARENA — CONTROL ROOM</b><span id="status" class="warn">Connecting...</span><span id="room" class="muted"></span><span style="margin-left:auto">Remote backend monitor</span></header>
+<header>
+<b>⚔️ BATTLE ARENA — CONTROL ROOM</b>
+<span id="status" class="headerStatus warn">Connecting...</span>
+<span id="room" class="muted"></span>
+<span style="margin-left:auto" class="muted">Remote control • @LorenzoLavido</span>
+</header>
+
 <div class="wrap">
-<section>
-<div class="card"><h3>🔌 TikTok Connection</h3><div id="connectionPanel" style="background:#080e18;border-radius:10px;padding:12px;border:1px solid #24324a"><div style="font-size:22px;font-weight:900" id="connectionState">CONNECTING...</div><div class="muted" id="connectionAccount">@LorenzoLavido</div><div class="muted" id="connectionRoom">Room: —</div><div class="note" id="connectionHint">The backend is waiting for the TikTok LIVE connection.</div></div></div><div class="card"><div class="stats">
-<div class="stat">TikTok<div id="tt" class="big">—</div></div><div class="stat">Players<div id="pc" class="big">0</div></div><div class="stat">Likes<div id="likes" class="big">0</div></div><div class="stat">Gifts<div id="gifts" class="big">0</div></div><div class="stat">Round<div id="round" class="big">1</div></div><div class="stat">Clients<div id="clients" class="big">0</div></div>
+<section class="hero">
+<div class="card connection" id="connectionPanel">
+<div class="connectionIcon" id="connectionIcon">⏳</div>
+<div class="connectionMain">
+<div id="connectionState" class="connectionState warn">CONNECTING...</div>
+<div id="connectionAccount" class="account">@LorenzoLavido</div>
+<div class="connectionMeta">
+<span class="pill" id="connectionRoom">ROOM —</span>
+<span class="pill" id="connectionGame">GAME —</span>
+<span class="pill" id="connectionError">NO ERROR</span>
+</div>
+<div class="note" id="connectionHint">Backend is starting the TikTok connection.</div>
+</div>
+<div class="actions">
+<button class="primary" onclick="post('/api/control',{action:'reconnect'})">🔄 Reconnect</button>
+<button onclick="openTikTok()">📺 TikTok LIVE</button>
+</div>
+</div>
+<div class="card">
+<div class="stats">
+<div class="stat"><div class="label">TikTok</div><div id="tt" class="big">—</div></div>
+<div class="stat"><div class="label">Players</div><div id="pc" class="big">0</div></div>
+<div class="stat"><div class="label">Likes</div><div id="likes" class="big">0</div></div>
+<div class="stat"><div class="label">Gifts</div><div id="gifts" class="big">0</div></div>
+<div class="stat"><div class="label">Round</div><div id="round" class="big">1</div></div>
+<div class="stat"><div class="label">Browsers</div><div id="clients" class="big">0</div></div>
+</div>
+</div>
+</section>
+
+<section class="mainGrid">
+<div class="card">
+<h3>🎮 Live Game — real-time</h3>
+<div id="arena" class="arena"><div class="center">⚔️</div></div>
+<div class="note">Live positions, HP, teams and battle physics. This view is independent from the public game screen.</div>
+</div>
+
+<div style="display:grid;gap:12px;align-content:start">
+<div class="card">
+<h3>🎛️ Control Center</h3>
+<div class="controlGrid">
+<div class="controlBlock"><h4>Game actions</h4><div class="controlButtons">
+<button onclick="demo('join')">JOIN</button><button onclick="demo('attack')">ATTACK</button><button onclick="demo('shield')">SHIELD</button><button onclick="demo('rage')">RAGE</button><button onclick="demo('boss')">BOSS</button>
 </div></div>
-<div class="card"><h3>🎮 Live Game View</h3><div id="arena" class="arena"><div class="center">⚔️</div></div><div class="note">This is the real-time game view. Player positions, HP and battle actions update live.</div></div>
-<div class="card"><h3>📺 TikTok LIVE View</h3><iframe class="liveview" id="liveview" title="TikTok LIVE"></iframe><div class="note">If TikTok allows embedding, the LIVE preview appears here. Otherwise use the LIVE button to open TikTok.</div><button onclick="openTikTok()">📺 Open TikTok LIVE</button></div>
-<div class="card"><h3>🎛️ Global controls</h3>
-<button onclick="demo('join')">JOIN</button><button onclick="demo('attack')">ATTACK</button><button onclick="demo('shield')">SHIELD</button><button onclick="demo('rage')">RAGE</button><button onclick="demo('boss')">BOSS</button><button onclick="demo('like')">LIKE</button><button onclick="demo('gift')">GIFT</button><br>
-<button onclick="post('/api/control',{action:'reconnect'})">🔄 Reconnect TikTok</button><button id="musicControl" onclick="toggleBackendMusic()">🔇 Battle Music</button><button onclick="post('/api/control',{action:'reset'})">♻️ Reset game</button>
+<div class="controlBlock"><h4>Testing</h4><div class="controlButtons">
+<button onclick="demo('like')">❤️ LIKE</button><button onclick="demo('gift')">🎁 GIFT</button><button onclick="post('/api/control',{action:'reset'})">♻️ Reset</button>
+</div></div>
+<div class="controlBlock"><h4>Music</h4><div class="controlButtons"><button id="musicControl" onclick="toggleBackendMusic()">🔇 Battle Music: OFF</button></div></div>
+<div class="controlBlock"><h4>Connection</h4><div class="controlButtons"><button class="primary" onclick="post('/api/control',{action:'reconnect'})">🔌 Reconnect TikTok</button></div></div>
+</div>
+</div>
+
+<div class="card">
+<h3>📺 TikTok LIVE monitor</h3>
+<iframe class="liveview" id="liveview" title="TikTok LIVE"></iframe>
+<div class="note">TikTok may block embedded LIVE playback. The button above opens the real LIVE page when embedding is unavailable.</div>
+</div>
 </div>
 </section>
-<section>
-<div class="card"><h3>👤 Player inspector</h3><div id="inspector" class="muted">Klik op een speler in de lijst.</div></div>
-<div class="card"><h3>👥 Players</h3><div class="p"><b>Name</b><b>Team</b><b>HP</b><b>Score</b></div><div id="players" class="players"></div></div>
-<div class="card"><h3>⚙️ Game settings</h3><div class="grid2">
-<label>Round sec<input id="roundSec" type="number" min="30" max="600"></label><label>Max players<input id="maxPlayers" type="number" min="1" max="200"></label>
-<label>Chat cooldown ms<input id="chatCd" type="number" min="0"></label><label>Like cooldown ms<input id="likeCd" type="number" min="0"></label>
-</div><h4>Commands</h4><div class="grid2"><label>JOIN<input id="cmdJoin"></label><label>ATTACK<input id="cmdAttack"></label><label>SHIELD<input id="cmdShield"></label><label>RAGE<input id="cmdRage"></label><label>BOSS<input id="cmdBoss"></label></div><h4>Gifts → action</h4><div class="grid2"><label>Rose<input id="giftRose"></label><label>Finger Heart<input id="giftFinger"></label><label>Perfume<input id="giftPerfume"></label><label>Heart Me<input id="giftHeart"></label><label>Galaxy<input id="giftGalaxy"></label></div><button onclick="save()">💾 Save settings</button><span id="saved"></span></div>
-</section>
-<section>
-<div class="card"><h3>🎁 Gift statistics — LIVE</h3><div id="giftstats" class="giftstats"><div class="muted">Waiting for gifts...</div></div></div>
-<div class="card"><h3>📡 Game activity</h3><div id="log" class="log"></div></div>
-<div class="card"><h3>🧪 RAW TikTok events</h3><div class="tabs"><button class="active" onclick="rawMode='all';this.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('active'));this.classList.add('active')">ALL</button><button onclick="rawMode='chat';this.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('active'));this.classList.add('active')">CHAT</button><button onclick="rawMode='gift';this.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('active'));this.classList.add('active')">GIFT</button><button onclick="rawMode='like';this.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('active'));this.classList.add('active')">LIKE</button></div><div id="raw" class="raw"></div></div>
-<div class="card"><h3>📋 Mappings preview</h3><div id="mapping" class="muted"></div></div>
-</section>
+
+<section class="two">
+<div class="card">
+<h3>👥 Players <span class="muted" id="playerCountLabel"></span></h3>
+<div class="p"><b>Name</b><b>Team</b><b>HP</b><b>Score</b></div>
+<div id="players" class="players"></div>
 </div>
+<div class="card">
+<h3>👤 Player Inspector</h3>
+<div id="inspector" class="inspector muted">Select a player to see all stats and controls.</div>
+</div>
+</section>
+
+<section class="two">
+<div class="card">
+<h3>📡 Game Activity</h3>
+<div id="log" class="log"></div>
+</div>
+<div class="card">
+<h3>🎁 Gifts — LIVE statistics</h3>
+<div id="giftstats" class="giftstats"><div class="muted">Waiting for gifts...</div></div>
+<div class="note">Gifts are recorded for monitoring and create visual reactions in the game; they do not change gameplay power or winner.</div>
+</div>
+</section>
+
+<details>
+<summary>⚙️ Game settings & command mappings</summary>
+<div>
+<div class="settings">
+<label>Round seconds<input id="roundSec" type="number" min="30" max="600"></label>
+<label>Max players<input id="maxPlayers" type="number" min="1" max="200"></label>
+<label>Chat cooldown ms<input id="chatCd" type="number" min="0"></label>
+<label>Like cooldown ms<input id="likeCd" type="number" min="0"></label>
+<label class="span2">JOIN commands<input id="cmdJoin"></label>
+<label class="span2">ATTACK commands<input id="cmdAttack"></label>
+<label class="span2">SHIELD commands<input id="cmdShield"></label>
+<label class="span2">RAGE commands<input id="cmdRage"></label>
+<label class="span2">BOSS commands<input id="cmdBoss"></label>
+<label>Rose →<input id="giftRose"></label>
+<label>Finger Heart →<input id="giftFinger"></label>
+<label>Perfume →<input id="giftPerfume"></label>
+<label>Heart Me →<input id="giftHeart"></label>
+<label>Galaxy →<input id="giftGalaxy"></label>
+</div>
+<div style="margin-top:9px"><button class="primary" onclick="save()">💾 Save settings</button> <span id="saved" class="ok"></span></div>
+<div class="note">Saving settings reconnects the TikTok listener so the new configuration becomes active.</div>
+</div>
+</details>
+
+<details>
+<summary>🧪 RAW TikTok events & technical diagnostics</summary>
+<div class="two">
+<div>
+<div class="tabs">
+<button class="active" onclick="setRawMode('all',this)">ALL</button>
+<button onclick="setRawMode('chat',this)">CHAT</button>
+<button onclick="setRawMode('gift',this)">GIFT</button>
+<button onclick="setRawMode('like',this)">LIKE</button>
+</div>
+<div id="raw" class="raw"></div>
+</div>
+<div>
+<h4>Current mappings / backend config</h4>
+<div id="mapping" class="mapping"></div>
+</div>
+</div>
+</details>
+</div>
+
 <script>
-let ws, state=null, selected=null, rawMode='all', rawEvents=[];
+let ws,state=null,selected=null,rawMode='all',rawEvents=[];
 const $=id=>document.getElementById(id);
-function connect(){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);ws.onopen=()=>status('Monitor connected','ok');ws.onclose=()=>{status('Reconnecting...','warn');setTimeout(connect,1500)};ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);if(m.type==='feed')log(m.item);if(m.type==='rawEvent')raw(m)}}catch(err){console.error(err)}}}
-function status(t,c){$('status').textContent=t;$('status').className=c}
-function render(s){state=s;renderConnection(s);const mb=$('musicControl');if(mb)mb.textContent=s.musicOn?'🔊 Battle Music: ON':'🔇 Battle Music: OFF';$('tt').textContent=(s.tiktokStatus||'').toUpperCase();$('pc').textContent=s.players.length;$('likes').textContent=s.totalLikes;$('gifts').textContent=s.totalGifts;$('round').textContent=s.round;$('clients').textContent=s.metrics?.connections||0;$('room').textContent=s.roomId?'ROOM '+s.roomId:'';drawArena(s.players);drawPlayers(s.players);drawGiftStats(s.giftStats||[]);if(s.config)fillConfig(s.config);$('mapping').textContent=JSON.stringify(s.config||{},null,2);setLiveView(s.config?.tiktokUsername||'')}
-function renderConnection(s){const st=s.tiktokStatus||'offline';const el=$('connectionState');const hint=$('connectionHint');const panel=$('connectionPanel');$('connectionAccount').textContent='@'+(s.config?.tiktokUsername||'LorenzoLavido');$('connectionRoom').textContent='Room: '+(s.roomId||'—');if(st==='connected'){el.textContent='🟢 CONNECTED';el.className='ok';hint.textContent='TikTok LIVE connection is active. The game is LIVE and can receive chat, likes and gifts.';panel.style.borderColor='#2f8f55';}else if(st==='connecting'){el.textContent='🟡 CONNECTING...';el.className='warn';hint.textContent='Connecting to the TikTok LIVE. Start the LIVE on TikTok and keep this control room open.';panel.style.borderColor='#8a6a20';}else if(st==='error'){el.textContent='🔴 CONNECTION ERROR';el.className='bad';hint.textContent='TikTok connection failed: '+(s.tiktokError||'Unknown error');panel.style.borderColor='#8f3040';}else{el.textContent='⚪ WAITING FOR LIVE';el.className='muted';hint.textContent='Backend is running. It will connect automatically when @'+(s.config?.tiktokUsername||'LorenzoLavido')+' is LIVE.';panel.style.borderColor='#24324a';}}\nfunction drawArena(ps){const a=$('arena');a.querySelectorAll('.orb').forEach(x=>x.parentElement?.remove());ps.forEach(p=>{const w=document.createElement('div');w.style.left=p.x+'%';w.style.top=p.y+'%';w.innerHTML='<div class="orb '+p.team+'">'+(p.team==='red'?'🔥':'❄️')+'<div class="pn">'+esc(p.name)+'</div><div class="bar"><i style="width:'+Math.max(0,p.hp/p.maxHp*100)+'%"></i></div></div>';a.appendChild(w)})}
-function drawGiftStats(gs){$('giftstats').innerHTML=gs.length?'<div class="giftitem"><b>Gift</b><b>Count</b><b>Diamonds</b></div>'+gs.map(g=>'<div class="giftitem"><span>🎁 '+esc(g.name)+'</span><b class="value">'+g.count.toLocaleString()+'</b><span>'+Number(g.diamonds||0).toLocaleString()+'</span></div>').join(''):'<div class="muted">No gifts received yet.</div>'}
-function setLiveView(username){if(!username)return;const frame=$('liveview');const target='https://www.tiktok.com/@'+encodeURIComponent(username)+'/live';if(frame.dataset.src!==target){frame.dataset.src=target;frame.src=target}}
+function connect(){
+ ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
+ ws.onopen=()=>status('Monitor connected','ok');
+ ws.onclose=()=>{status('Monitor reconnecting...','warn');setTimeout(connect,1500)};
+ ws.onerror=()=>status('Monitor socket error','bad');
+ ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);if(m.type==='feed')log(m.item);if(m.type==='rawEvent')raw(m)}catch(err){console.error(err)}};
+}
+function status(t,c){$('status').textContent=t;$('status').className='headerStatus '+c}
+function render(s){
+ state=s;
+ renderConnection(s);
+ $('tt').textContent=(s.tiktokStatus||'').toUpperCase();
+ $('pc').textContent=s.players?.length||0;
+ $('likes').textContent=(s.totalLikes||0).toLocaleString();
+ $('gifts').textContent=(s.totalGifts||0).toLocaleString();
+ $('round').textContent=s.round||1;
+ $('clients').textContent=s.metrics?.connections||0;
+ $('room').textContent=s.roomId?'ROOM '+s.roomId:'';
+ $('playerCountLabel').textContent='• '+(s.players?.length||0)+' active';
+ const mb=$('musicControl');if(mb)mb.textContent=s.musicOn?'🔊 Battle Music: ON':'🔇 Battle Music: OFF';
+ drawArena(s.players||[]);drawPlayers(s.players||[]);drawGiftStats(s.giftStats||[]);
+ if(s.config)fillConfig(s.config);
+ $('mapping').textContent=JSON.stringify({status:s.tiktokStatus,error:s.tiktokError||'',roomId:s.roomId||null,config:s.config||{}},null,2);
+ setLiveView(s.config?.tiktokUsername||'');
+}
+function renderConnection(s){
+ const st=s.tiktokStatus||'offline',el=$('connectionState'),panel=$('connectionPanel'),icon=$('connectionIcon');
+ $('connectionAccount').textContent='@'+(s.config?.tiktokUsername||'LorenzoLavido');
+ $('connectionRoom').textContent='ROOM '+(s.roomId||'—');
+ $('connectionGame').textContent='GAME '+(s.gameActive?'ACTIVE':'STOPPED');
+ $('connectionError').textContent=s.tiktokError?'ERROR: '+String(s.tiktokError).slice(0,80):'NO ERROR';
+ if(st==='connected'){el.textContent='🟢 CONNECTED';el.className='connectionState ok';icon.textContent='🟢';panel.style.borderColor='#2f8f55';$('connectionHint').textContent='TikTok LIVE is connected. Chat, likes, gifts and members are flowing into the backend.'}
+ else if(st==='connecting'){el.textContent='🟡 CONNECTING...';el.className='connectionState warn';icon.textContent='⏳';panel.style.borderColor='#8a6a20';$('connectionHint').textContent='Resolving the LIVE room and opening the TikTok WebSocket connection...'}
+ else if(st==='error'){el.textContent='🔴 CONNECTION ERROR';el.className='connectionState bad';icon.textContent='🔴';panel.style.borderColor='#8f3040';$('connectionHint').textContent=s.tiktokError||'TikTok connection failed. Press Reconnect after the LIVE is active.'}
+ else{el.textContent='⚪ WAITING FOR LIVE';el.className='connectionState muted';icon.textContent='⚪';panel.style.borderColor='#24324a';$('connectionHint').textContent='Backend is running and will keep trying to connect to @'+(s.config?.tiktokUsername||'LorenzoLavido')+'.'}
+}
+function drawArena(ps){
+ const a=$('arena');a.querySelectorAll('.orb').forEach(x=>x.parentElement?.remove());
+ ps.forEach(p=>{const w=document.createElement('div');w.style.left=p.x+'%';w.style.top=p.y+'%';w.innerHTML='<div class="orb '+p.team+'">'+(p.team==='red'?'🔥':'❄️')+'<div class="pn">'+esc(p.name)+'</div><div class="bar"><i style="width:'+Math.max(0,p.hp/p.maxHp*100)+'%"></i></div></div>';a.appendChild(w)})
+}
+function drawPlayers(ps){
+ $('players').innerHTML=ps.map(p=>'<div class="p '+(selected==p.id?'selected':'')+'" onclick="selectPlayer('+p.id+')"><b>'+esc(p.name)+'</b><span class="'+p.team+'">'+(p.team||'—')+'</span><span>'+Math.round(p.hp)+'/'+Math.round(p.maxHp)+'</span><span>'+p.score+'</span></div>').join('')||'<div class="muted" style="padding:10px">No players yet.</div>';
+}
+function drawGiftStats(gs){$('giftstats').innerHTML=gs.length?'<div class="giftitem"><b>Gift</b><b>Count</b><b>Diamonds</b></div>'+gs.map(g=>'<div class="giftitem"><span>🎁 '+esc(g.name)+'</span><b class="value">'+Number(g.count||0).toLocaleString()+'</b><span>'+Number(g.diamonds||0).toLocaleString()+'</span></div>').join(''):'<div class="muted">No gifts received yet.</div>'}
+function setLiveView(username){if(!username)return;const f=$('liveview'),u='https://www.tiktok.com/@'+encodeURIComponent(username)+'/live';if(f.dataset.src!==u){f.dataset.src=u;f.src=u}}
 function openTikTok(){const u=state?.config?.tiktokUsername||'LorenzoLavido';window.open('https://www.tiktok.com/@'+encodeURIComponent(u)+'/live','_blank')}
-function drawPlayers(ps){$('players').innerHTML=ps.map(p=>'<div class="p '+(selected==p.id?'selected':'')+'" onclick="selectPlayer('+p.id+')"><b>'+esc(p.name)+'</b><span class="'+p.team+'">'+p.team+'</span><span>'+Math.round(p.hp)+'/'+Math.round(p.maxHp)+'</span><span>'+p.score+'</span></div>').join('')}
-function selectPlayer(id){selected=id;const p=state?.players.find(x=>x.id==id);if(!p)return;$('inspector').innerHTML='<b>'+esc(p.name)+'</b> <span class="'+p.team+'">'+p.team+'</span><br>HP '+Math.round(p.hp)+' / '+Math.round(p.maxHp)+' · ⚡ '+Math.round(p.energy)+' · Score '+p.score+' · L'+p.level+' · XP '+p.xp+' · Combo '+p.combo+'<div><button onclick="pcmd(\'attack\')">⚔️ Attack</button><button onclick="pcmd(\'shield\')">🛡 Shield</button><button onclick="pcmd(\'rage\')">⚡ Rage</button><button onclick="pcmd(\'boss\')">👹 Boss</button><button onclick="pcmd(\'heal\')">💚 Heal</button><button onclick="pcmd(\'energy\')">🔋 Energy 100</button><button onclick="pcmd(\'randomize\')">📍 Move</button><button class="danger" onclick="pcmd(\'remove\')">🗑 Remove</button></div>'}
-async function toggleBackendMusic(){await post('/api/control',{action:'music',enabled:!(state?.musicOn)});}
-async function pcmd(action){if(!selected)return;await post('/api/player-control',{id:selected,action});}
-function log(i){if(!i)return;const d=document.createElement('div');d.className='event';d.textContent=new Date(i.ts||Date.now()).toLocaleTimeString()+' '+i.text;$('log').prepend(d);while($('log').children.length>120)$('log').lastChild.remove()}
-function raw(m){rawEvents.unshift(m);rawEvents=rawEvents.slice(0,100);drawRaw()}
-function drawRaw(){const list=rawEvents.filter(x=>rawMode==='all'||x.event.toLowerCase()===rawMode);$('raw').innerHTML=list.map(x=>'<div class="rawline"><b>'+new Date().toLocaleTimeString()+' '+x.event+'</b><br>'+esc(JSON.stringify(x.data))+'</div>').join('')}
-function fillConfig(c){const v=(x,k)=>$(x).value=(c[k]||[]).join(', ');v('cmdJoin','commands.join');v('cmdAttack','commands.attack');v('cmdShield','commands.shield');v('cmdRage','commands.rage');v('cmdBoss','commands.boss');$('giftRose').value=c.gifts?.rose||'attack';$('giftFinger').value=c.gifts?.['finger heart']||'shield';$('giftPerfume').value=c.gifts?.perfume||'rage';$('giftHeart').value=c.gifts?.['heart me']||'rage';$('giftGalaxy').value=c.gifts?.galaxy||'boss';$('roundSec').value=state.roundSeconds;$('maxPlayers').value=c.maxPlayers||80;$('chatCd').value=c.commentCooldownMs||700;$('likeCd').value=c.likeCooldownMs||350}
+function selectPlayer(id){
+ selected=id;const p=state?.players?.find(x=>x.id==id);if(!p)return;
+ $('inspector').innerHTML='<b style="font-size:17px">'+esc(p.name)+'</b> <span class="'+p.team+'">'+(p.team||'—')+'</span><br><br>HP '+Math.round(p.hp)+' / '+Math.round(p.maxHp)+' · ⚡ '+Math.round(p.energy)+' · Score '+p.score+' · Level '+p.level+' · XP '+p.xp+' · Combo '+p.combo+'<br>❤️ Likes '+(p.likesGiven||0)+' · 🎁 Gifts '+(p.giftsGiven||0)+'<div style="margin-top:8px"><button onclick="pcmd(\'attack\')">⚔️ Attack</button><button onclick="pcmd(\'shield\')">🛡 Shield</button><button onclick="pcmd(\'rage\')">⚡ Rage</button><button onclick="pcmd(\'boss\')">👹 Boss</button><button onclick="pcmd(\'heal\')">💚 Heal</button><button onclick="pcmd(\'energy\')">🔋 Energy</button><button onclick="pcmd(\'randomize\')">📍 Move</button><button class="danger" onclick="pcmd(\'remove\')">🗑 Remove</button></div>';
+ drawPlayers(state.players||[]);
+}
+async function toggleBackendMusic(){await post('/api/control',{action:'music',enabled:!(state?.musicOn)})}
+async function pcmd(action){if(selected==null)return;await post('/api/player-control',{id:selected,action})}
+function log(i){if(!i)return;const d=document.createElement('div');d.className='event';d.textContent=new Date(i.ts||Date.now()).toLocaleTimeString()+' '+i.text;$('log').prepend(d);while($('log').children.length>150)$('log').lastChild.remove()}
+function raw(m){rawEvents.unshift(m);rawEvents=rawEvents.slice(0,150);drawRaw()}
+function setRawMode(mode,btn){rawMode=mode;btn.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');drawRaw()}
+function drawRaw(){const list=rawEvents.filter(x=>rawMode==='all'||String(x.event||'').toLowerCase()===rawMode);$('raw').innerHTML=list.map(x=>'<div class="rawline"><b>'+new Date().toLocaleTimeString()+' '+esc(x.event)+'</b><br>'+esc(JSON.stringify(x.data))+'</div>').join('')||'<div class="muted">No raw events received yet.</div>'}
+function fillConfig(c){
+ const v=(id,key)=>$(id).value=(c.commands?.[key]||[]).join(', ');
+ v('cmdJoin','join');v('cmdAttack','attack');v('cmdShield','shield');v('cmdRage','rage');v('cmdBoss','boss');
+ $('giftRose').value=c.gifts?.rose||'attack';$('giftFinger').value=c.gifts?.['finger heart']||'shield';$('giftPerfume').value=c.gifts?.perfume||'rage';$('giftHeart').value=c.gifts?.['heart me']||'rage';$('giftGalaxy').value=c.gifts?.galaxy||'boss';
+ $('roundSec').value=c.roundSeconds||300;$('maxPlayers').value=c.maxPlayers||80;$('chatCd').value=c.commentCooldownMs??700;$('likeCd').value=c.likeCooldownMs??350;
+}
 function val(id){return $(id).value.split(',').map(x=>x.trim()).filter(Boolean)}
-async function save(){const body={roundSeconds:Number($('roundSec').value),maxPlayers:Number($('maxPlayers').value),commentCooldownMs:Number($('chatCd').value),likeCooldownMs:Number($('likeCd').value),commands:{join:val('cmdJoin'),attack:val('cmdAttack'),shield:val('cmdShield'),rage:val('cmdRage'),boss:val('cmdBoss')},gifts:{rose:$('giftRose').value,'finger heart':$('giftFinger').value,perfume:$('giftPerfume').value,'heart me':$('giftHeart').value,galaxy:$('giftGalaxy').value}};const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();$('saved').textContent=j.ok?' ✓ saved':'';setTimeout(()=>$('saved').textContent='',1800)}
-async function post(u,b){await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})}
+async function save(){
+ const body={roundSeconds:Number($('roundSec').value),maxPlayers:Number($('maxPlayers').value),commentCooldownMs:Number($('chatCd').value),likeCooldownMs:Number($('likeCd').value),commands:{join:val('cmdJoin'),attack:val('cmdAttack'),shield:val('cmdShield'),rage:val('cmdRage'),boss:val('cmdBoss')},gifts:{rose:$('giftRose').value,'finger heart':$('giftFinger').value,perfume:$('giftPerfume').value,'heart me':$('giftHeart').value,galaxy:$('giftGalaxy').value}};
+ const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();$('saved').textContent=j.ok?'✓ saved':'';setTimeout(()=>$('saved').textContent='',1800)
+}
+async function post(u,b){try{await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})}catch(e){console.error(e)}}
 function demo(a){post('/api/control',{action:'demo',gameAction:a})}
-function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))}
+function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 connect();
-</script></body></html>
+</script>
+</body>
+</html>
