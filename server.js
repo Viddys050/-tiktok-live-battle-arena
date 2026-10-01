@@ -71,7 +71,6 @@ let tiktok = null;
 let lastRoomId = "";
 let tiktokStatus = "offline";
 let tiktokError = "";
-let tiktokConnectStage = "Starting";
 let reconnectTimer = null;
 let reconnectKickTimer = null;
 let livePreviewBrowser = null;
@@ -423,7 +422,7 @@ function serialize() {
     type: "state",
     round, roundSeconds: Number(config.roundSeconds || 120),
     remaining: Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now()-roundStarted)/1000)),
-    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError, tiktokConnectStage, gameActive,
+    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError, gameActive,
     players: list, feed: events.slice(0, 20),
     giftStats: [...giftStats.values()].sort((a,b) => b.count - a.count),
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
@@ -582,36 +581,173 @@ async function getTikTokRoomIdWithBrowser(username) {
   return null;
 }
 async function getTikTokRoomId(username) {
-  const ua="Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1";
-  const timeout=(promise,ms,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+" timed out")),ms))]);
-  const directPage=async()=>{
-    const r=await fetch("https://www.tiktok.com/@"+encodeURIComponent(username)+"/live",{headers:{"User-Agent":ua,"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8","Accept-Language":"en-US,en;q=0.9"}});
-    const html=await r.text();
-    for(const p of [/snssdk\d*:\/\/live\?room_id=(\d+)/i,/"roomId"\s*:\s*"?([0-9]{10,})"?/i,/"room_id"\s*:\s*"?([0-9]{10,})"?/i,/"streamId"\s*:\s*"?([0-9]{10,})"?/i]){const m=html.match(p);if(m?.[1])return String(m[1]);}
-    return null;
-  };
-  const tikrec=async()=>{
-    const r=await fetch("https://tikrec.com/tiktok/room/api/sign?unique_id="+encodeURIComponent(username),{headers:{"User-Agent":ua,"Accept":"application/json,text/plain,*/*"}});
-    if(!r.ok)throw new Error("TikRec HTTP "+r.status);
-    const x=await r.json(); const signed=x?.signed_url||(x?.signed_path?"https://www.tiktok.com"+x.signed_path:"");
-    if(!signed)throw new Error("TikRec returned no signed URL");
-    const rr=await fetch(signed,{headers:{"User-Agent":ua,"Accept":"application/json,text/plain,*/*","Referer":"https://www.tiktok.com/","Origin":"https://www.tiktok.com"}});
-    const d=await rr.json(); const id=d?.data?.room_info?.id||d?.data?.roomInfo?.roomId||d?.data?.room_info?.roomId||d?.data?.user?.roomId||d?.data?.liveRoom?.roomId||d?.room_id;
-    return id?String(id):null;
-  };
-  const api=async()=>{
-    const q=new URLSearchParams({aid:"1988",app_language:"en",app_name:"tiktok_web",browser_language:"en-US",browser_name:"Safari",browser_online:"true",browser_platform:"iPhone",browser_version:"18.6",device_platform:"web",from_page:"user",is_page_visible:"true",channel:"tiktok_web",region:"US",webcast_language:"en",sourceType:"54",uniqueId:username});
-    const r=await fetch("https://www.tiktok.com/api-live/user/room/?"+q.toString(),{headers:{"User-Agent":ua,"Accept":"application/json,text/plain,*/*","Referer":"https://www.tiktok.com/","Origin":"https://www.tiktok.com"}});
-    const d=await r.json(); const id=d?.data?.user?.roomId||d?.data?.liveRoom?.roomId; return id?String(id):null;
-  };
-  console.log("=== FAST ROOM LOOKUP START ===");
-  const results=await Promise.allSettled([timeout(directPage(),6000,"TikTok LIVE page"),timeout(tikrec(),6000,"TikRec"),timeout(api(),6000,"TikTok API")]);
-  for(const r of results)if(r.status==="fulfilled"&&r.value){console.log("FAST ROOM ID FOUND:",r.value);return r.value;}
-  console.log("Fast lookup failed; browser fallback max 5s");
-  const browserId=await timeout(getTikTokRoomIdWithBrowser(username),5000,"Browser room lookup").catch(err=>{console.log("Browser room lookup timeout:",err?.message||err);return null;});
-  if(browserId)return String(browserId);
-  throw new Error("TikTok LIVE room could not be found within the startup window.");
+  // Fast path first: HTTP lookups are much cheaper than starting Chromium.
+  // Chromium is kept as the final fallback because it can take 10+ seconds on Render.
+  console.log("=== ROOM ID LOOKUP START ===");
+  console.log("Account:", "@"+username);
+  console.log("Trying direct TikTok LIVE page room lookup...");
+  try {
+    const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
+    const pageResponse = await fetch(liveUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+    const html = await pageResponse.text();
+    console.log("TikTok LIVE page HTTP:", pageResponse.status, "bytes:", html.length);
+
+    const directPatterns = [
+      /snssdk\d*:\/\/live\?room_id=(\d+)/i,
+      /"roomId"\s*:\s*"?(\d{10,})"?/i,
+      /"room_id"\s*:\s*"?(\d{10,})"?/i
+    ];
+    for (const pattern of directPatterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) {
+        console.log("Found LIVE room ID in page:", match[1]);
+        return String(match[1]);
+      }
+    }
+
+    const scriptPatterns = [
+      /<script[^>]+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/i,
+      /<script[^>]+id="sigi-persisted-data"[^>]*>([\s\S]*?)<\/script>/i,
+      /<script[^>]+id="SIGI_STATE"[^>]*>([\s\S]*?)<\/script>/i
+    ];
+    for (const pattern of scriptPatterns) {
+      const match = html.match(pattern);
+      if (!match?.[1]) continue;
+      try {
+        const data = JSON.parse(match[1]);
+        const json = JSON.stringify(data);
+        const roomMatch = json.match(/"roomId":"?(\d{10,})"?/i);
+        if (roomMatch?.[1]) {
+          console.log("Found LIVE room ID in embedded JSON:", roomMatch[1]);
+          return String(roomMatch[1]);
+        }
+      } catch {}
+    }
+
+    console.log("TikTok LIVE page did not expose a room ID.");
+  } catch (err) {
+    console.log("Direct LIVE page lookup failed:", err?.message || err);
+  }
+
+  console.log("Trying TikRec signed TikTok room lookup...");
+  let signError = null;
+
+  try {
+    const signUrl = `https://tikrec.com/tiktok/room/api/sign?unique_id=${encodeURIComponent(username)}`;
+    const signResponse = await fetch(signUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+
+    const signText = await signResponse.text();
+    console.log("TikRec signer HTTP:", signResponse.status, "bytes:", signText.length);
+
+    if (!signResponse.ok) throw new Error(`HTTP ${signResponse.status}`);
+
+    const signed = JSON.parse(signText);
+    const signedUrl = signed?.signed_url ||
+      (signed?.signed_path ? `https://www.tiktok.com${signed.signed_path}` : "");
+
+    if (!signedUrl) throw new Error("TikRec returned no signed URL");
+
+    const roomResponse = await fetch(signedUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "application/json,text/plain,*/*",
+        "Referer": "https://www.tiktok.com/",
+        "Origin": "https://www.tiktok.com",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+
+    const roomText = await roomResponse.text();
+    console.log("Signed TikTok room HTTP:", roomResponse.status, "bytes:", roomText.length);
+
+    const data = JSON.parse(roomText);
+    const roomId =
+      data?.data?.room_info?.id ||
+      data?.data?.roomInfo?.roomId ||
+      data?.data?.room_info?.roomId ||
+      data?.data?.user?.roomId ||
+      data?.data?.liveRoom?.roomId ||
+      data?.room_id;
+
+    if (!roomId) {
+      throw new Error(`Signed API returned no room ID (status ${data?.statusCode ?? data?.status_code ?? "unknown"})`);
+    }
+
+    return String(roomId);
+  } catch (err) {
+    signError = err;
+    console.log("TikRec lookup failed:", err?.message || err);
+  }
+
+  console.log("Trying direct TikTok API room lookup as fallback...");
+
+  const params = new URLSearchParams({
+    aid: "1988",
+    app_language: "en",
+    app_name: "tiktok_web",
+    browser_language: "en-US",
+    browser_name: "Safari",
+    browser_online: "true",
+    browser_platform: "iPhone",
+    browser_version: "18.6",
+    device_platform: "web",
+    from_page: "user",
+    is_page_visible: "true",
+    channel: "tiktok_web",
+    region: "US",
+    webcast_language: "en",
+    sourceType: "54",
+    uniqueId: username
+  });
+
+  const url = `https://www.tiktok.com/api-live/user/room/?${params.toString()}`;
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+      "Accept": "application/json,text/plain,*/*",
+      "Referer": "https://www.tiktok.com/",
+      "Origin": "https://www.tiktok.com",
+      "Accept-Language": "en-US,en;q=0.9"
+    }
+  });
+
+  try {
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(`TikTok API returned non-JSON HTTP ${response.status}`); }
+
+    if (!response.ok || data?.statusCode) {
+      throw new Error(`TikTok API error HTTP ${response.status}: ${data?.statusCode || ""} ${data?.message || ""}`);
+    }
+
+    const roomId = data?.data?.user?.roomId || data?.data?.liveRoom?.roomId;
+    if (roomId) return String(roomId);
+    throw new Error("TikTok API returned no LIVE room ID");
+  } catch (apiError) {
+    console.log("Direct TikTok API lookup failed:", apiError?.message || apiError);
+  }
+
+  // Last resort: Chromium. This is intentionally last because it is the slowest
+  // method and is only needed when TikTok hides the room ID from HTTP responses.
+  const browserRoomId = await getTikTokRoomIdWithBrowser(username);
+  if (browserRoomId) return String(browserRoomId);
+
+  throw new Error(`TikTok LIVE room lookup failed. Direct page, TikRec, API and browser lookup all failed.${signError ? ` TikRec: ${signError.message}` : ""}`);
 }
+
 async function connectTikTok() {
   if (reconnectInProgress) return;
   reconnectInProgress = true;
@@ -652,7 +788,7 @@ async function connectTikTok() {
       // Keep connection attempts short. The connector's WebSocket handshake can
       // otherwise wait around 20 seconds before surfacing a failure.
       webClientOptions: { timeout: { request: 7000 } },
-      wsClientOptions: { handshakeTimeout: 6000 }
+      wsClientOptions: { handshakeTimeout: 7000 }
     });
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
@@ -729,18 +865,14 @@ async function connectTikTok() {
     // Resolve the LIVE room once, then pass the explicit roomId to the connector.
     // This avoids making tiktok-live-connector repeat its own room lookup.
     // It also lets the control room show the exact room we are trying to enter.
-    tiktokConnectStage = "Finding LIVE room…";
-    broadcastState();
     const roomId = await getTikTokRoomId(username);
-    tiktokConnectStage = "LIVE room found — opening TikTok connection…";
-    broadcastState();
     if (!roomId) throw new Error("TikTok is not LIVE or no room ID could be resolved.");
     lastRoomId = String(roomId);
     broadcastState();
-    console.log("Calling tiktok.connect(roomId):", roomId);\n    broadcastState();
+    console.log("Calling tiktok.connect(roomId):", roomId);
     const connectPromise = tiktok.connect(roomId);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TikTok WebSocket connection timed out after 6000ms")), 6000)
+      setTimeout(() => reject(new Error("TikTok WebSocket connection timed out after 15000ms")), 15000)
     );
     const result = await Promise.race([connectPromise, timeoutPromise]);
 
@@ -1056,14 +1188,7 @@ app.post("/api/control", async (req,res) => {
     } else if(a==="like") {
       broadcast({type:"action",action:"like",player:"test-like",team:req.body?.team==="blue"?"blue":"red",count:1,likeCount:1,name:req.body?.name||"Test Viewer",finalBattle:false});
     } else if(a==="gift") {
-      const team = req.body?.team==="blue" ? "blue" : "red";
-      const p = getOrCreate(req.body?.name||"Test Viewer","monitor-gift-"+Date.now());
-      p.team = team;
-      const giftName = req.body?.giftName || "Rose";
-      const rule = findGiftRule(giftName);
-      const effect = rule ? applyGiftEffect(p, rule) : null;
-      broadcast({type:"action",action:"giftReceived",player:p.id,team,name:p.name,giftName,count:1,coins:rule?.coins||0,effect:rule?.effect||null,effectLabel:effect?.label||rule?.label||"visual reaction"});
-      pushEvent(`🎁 ${p.name} sent ${giftName} (test)${rule ? ` → ${rule.label}` : ""}`,"gift");
+      broadcast({type:"action",action:"giftReceived",player:"test-gift",team:req.body?.team==="red"?"red":"blue",name:req.body?.name||"Test Viewer",giftName:req.body?.giftName||"Rose",count:1});
     } else {
       const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
       if(a==="boss"){p.energy=100;boss(p);} else command(p,a);
@@ -1082,13 +1207,7 @@ app.post("/api/demo", (req,res) => {
   else if (action === "rage") rage(p);
   else if (action === "boss") { p.energy=100; boss(p); }
   else if (action === "like") handleLike({ uniqueId:`demo-${name}`, nickname:name, likeCount:10 });
-  else if (action === "gift") {
-    p.team = p.team || (Math.random() < 0.5 ? "red" : "blue");
-    const giftName = req.body?.giftName || "Rose";
-    const rule = findGiftRule(giftName);
-    const effect = rule ? applyGiftEffect(p, rule) : null;
-    broadcast({type:"action",action:"giftReceived",player:p.id,team:p.team,name:p.name,giftName,count:1,coins:rule?.coins||0,effect:rule?.effect||null,effectLabel:effect?.label||rule?.label||"visual reaction"});
-  }
+  else if (action === "gift") handleGift({ uniqueId:`demo-${name}`, nickname:name, giftName:"Rose", repeatCount:5, diamondCount:1 });
   else command(p, action === "join" ? "join" : "hello");
   res.json({ok:true});
 });
