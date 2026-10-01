@@ -899,27 +899,55 @@ function resetRound() {
   broadcastState();
 }
 
+async function launchLivePreviewBrowser() {
+  const browser = await playwright.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: true
+  });
+  browser.on("disconnected", () => {
+    if (livePreviewBrowser === browser) {
+      livePreviewBrowser = null;
+      livePreviewPage = null;
+    }
+  });
+  return browser;
+}
+
 async function getLivePreviewPage() {
-  if (livePreviewPage && !livePreviewPage.isClosed()) return livePreviewPage;
+  if (livePreviewPage && !livePreviewPage.isClosed() && livePreviewBrowser?.isConnected()) {
+    return livePreviewPage;
+  }
+
+  livePreviewPage = null;
+  if (livePreviewBrowser && !livePreviewBrowser.isConnected()) {
+    livePreviewBrowser = null;
+  }
   if (!livePreviewBrowser) {
-    livePreviewBrowser = await playwright.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: true
+    livePreviewBrowser = await launchLivePreviewBrowser();
+  }
+
+  try {
+    livePreviewPage = await livePreviewBrowser.newPage({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+      viewport: { width: 960, height: 540 },
+      deviceScaleFactor: 1
+    });
+  } catch (err) {
+    try { await livePreviewBrowser.close(); } catch {}
+    livePreviewBrowser = await launchLivePreviewBrowser();
+    livePreviewPage = await livePreviewBrowser.newPage({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+      viewport: { width: 960, height: 540 },
+      deviceScaleFactor: 1
     });
   }
-  livePreviewPage = await livePreviewBrowser.newPage({
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-    viewport: { width: 960, height: 540 },
-    deviceScaleFactor: 1
-  });
+
   await livePreviewPage.goto(
     `https://www.tiktok.com/@${encodeURIComponent(config.tiktokUsername)}/live`,
     { waitUntil: "domcontentloaded", timeout: 30000 }
   );
 
-  // TikTok can show a consent/privacy dialog before the LIVE page becomes usable.
-  // Click the visible consent buttons and also dismiss common privacy/notification prompts.
   await livePreviewPage.waitForTimeout(1500);
   const consentTexts = [
     "Accept all", "Accept", "I agree", "Agree",
@@ -937,7 +965,6 @@ async function getLivePreviewPage() {
       }
     } catch {}
   }
-  // Some TikTok consent dialogs use links instead of buttons.
   for (const label of consentTexts) {
     try {
       const links = livePreviewPage.getByText(new RegExp("^" + label + "$", "i"));
@@ -952,3 +979,142 @@ async function getLivePreviewPage() {
   await livePreviewPage.waitForTimeout(3500);
   return livePreviewPage;
 }
+app.get("/api/live-preview.jpg", async (_,res) => {
+  if (!config.tiktokUsername) return res.status(400).json({ok:false,error:"TikTok username is not configured"});
+  if (livePreviewBusy) return res.status(429).end();
+  livePreviewBusy = true;
+  try {
+    const page = await getLivePreviewPage();
+    const url = `https://www.tiktok.com/@${encodeURIComponent(config.tiktokUsername)}/live`;
+    if (!page.url().includes(`/@${encodeURIComponent(config.tiktokUsername)}/live`)) {
+      await page.goto(url, { waitUntil:"domcontentloaded", timeout:30000 });
+      await page.waitForTimeout(3000);
+    }
+    const jpg = await page.screenshot({type:"jpeg",quality:72});
+    res.set("Cache-Control","no-store, no-cache, must-revalidate");
+    res.type("image/jpeg").send(jpg);
+  } catch (err) {
+    console.error("LIVE preview error:", err?.message || err);
+    try { await livePreviewPage?.close(); } catch {}
+    livePreviewPage = null;
+    res.status(503).json({ok:false,error:String(err?.message || err)});
+  } finally {
+    livePreviewBusy = false;
+  }
+});
+
+app.get("/api/state", (_,res) => res.json(serialize()));
+app.get("/api/config", (_,res) => res.json(config));
+app.post("/api/config", async (req,res) => {
+  const incoming = req.body || {};
+  if (typeof incoming.tiktokUsername === "string")
+    config.tiktokUsername = incoming.tiktokUsername.replace(/^@/,"").trim();
+  if (typeof incoming.demoMode === "boolean") config.demoMode = incoming.demoMode;
+  if (Number.isFinite(Number(incoming.roundSeconds)))
+    config.roundSeconds = Math.max(30, Math.min(600, Number(incoming.roundSeconds)));
+  if (Number.isFinite(Number(incoming.maxPlayers)))
+    config.maxPlayers = Math.max(1, Math.min(200, Number(incoming.maxPlayers)));
+  if (Number.isFinite(Number(incoming.commentCooldownMs)))
+    config.commentCooldownMs = Math.max(0, Number(incoming.commentCooldownMs));
+  if (Number.isFinite(Number(incoming.likeCooldownMs)))
+    config.likeCooldownMs = Math.max(0, Number(incoming.likeCooldownMs));
+  if (incoming.commands && typeof incoming.commands === "object") {
+    config.commands = { ...config.commands, ...incoming.commands };
+  }
+  if (incoming.gifts && typeof incoming.gifts === "object") {
+    config.gifts = { ...config.gifts, ...incoming.gifts };
+  }
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  await connectTikTok();
+  res.json({ok:true, config, status:tiktokStatus});
+});
+app.post("/api/reset", (_,res) => { players.clear(); round=1; roundStarted=now(); events=[]; totalLikes=0; totalGifts=0; giftStats.clear(); nextPlayerId=1; pushEvent("🔄 Spel gereset.", "system"); res.json({ok:true}); });
+app.get("/monitor", (_,res) => res.sendFile(path.join(__dirname, "public", "monitor.html")));
+app.post("/api/control", async (req,res) => {
+  const action=normalize(req.body?.action);
+  if(action==="reset"){players.clear();round=1;roundStarted=now();events=[];totalLikes=0;totalGifts=0;giftStats.clear();nextPlayerId=1;pushEvent("🔄 Spel gereset door monitor.","system");}
+  else if(action==="reconnect"){await connectTikTok();}
+  else if(action==="music"){musicOn = typeof req.body?.enabled === "boolean" ? req.body.enabled : !musicOn;broadcast({type:"action",action:"music",enabled:musicOn});}
+  else if(action==="demo"){
+    const names=["Luna","Rico","Mila","Daan","Noah","Jay","Sanne","Max","Kai","Nova"];
+    const a=req.body?.gameAction||"attack";
+    // The control-room visual tests for the BOYS/GIRLS screen are isolated from
+    // the legacy combat actions. They only emit the exact frontend visual event.
+    if(a==="boys" || a==="girls") {
+      const team = a==="boys" ? "red" : "blue";
+      const p = getOrCreate(req.body?.name||"Test Viewer","monitor-team-"+Date.now());
+      p.team = team;
+      broadcast({type:"action",action:"team",player:p.id,team,name:p.name});
+      pushEvent((team==="red"?"🔴 ":"🔵 ")+p.name+" joins "+(team==="red"?"BOYS":"GIRLS")+" (test)","join");
+    } else if(a==="like") {
+      broadcast({type:"action",action:"like",player:"test-like",team:req.body?.team==="blue"?"blue":"red",count:1,likeCount:1,name:req.body?.name||"Test Viewer",finalBattle:false});
+    } else if(a==="gift") {
+      broadcast({type:"action",action:"giftReceived",player:"test-gift",team:req.body?.team==="red"?"red":"blue",name:req.body?.name||"Test Viewer",giftName:req.body?.giftName||"Rose",count:1});
+    } else {
+      const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
+      if(a==="boss"){p.energy=100;boss(p);} else command(p,a);
+    }
+  }
+  broadcastState(); res.json({ok:true,status:tiktokStatus});
+});
+app.post("/api/demo", (req,res) => {
+  const actions = ["join","attack","shield","rage","boss","like","gift"];
+  const action = req.body?.action || actions[Math.floor(Math.random()*actions.length)];
+  const names = ["Luna","Rico","Mila","Daan","Noah","Jay","Sanne","Max","Kai","Nova"];
+  const name = req.body?.name || names[Math.floor(Math.random()*names.length)];
+  const p = getOrCreate(name, `demo-${name}`);
+  if (action === "attack") attack(p,2,"demo");
+  else if (action === "shield") shield(p);
+  else if (action === "rage") rage(p);
+  else if (action === "boss") { p.energy=100; boss(p); }
+  else if (action === "like") handleLike({ uniqueId:`demo-${name}`, nickname:name, likeCount:10 });
+  else if (action === "gift") handleGift({ uniqueId:`demo-${name}`, nickname:name, giftName:"Rose", repeatCount:5, diamondCount:1 });
+  else command(p, action === "join" ? "join" : "hello");
+  res.json({ok:true});
+});
+app.post("/api/player-control", (req,res) => {
+  const id = Number(req.body?.id), p = players.get(id), action = normalize(req.body?.action);
+  if (!p) return res.status(404).json({ok:false,error:"Player not found"});
+  if (action==="boys") {
+    p.team="red";
+    broadcast({type:"action",action:"team",player:p.id,team:"red",name:p.name});
+    pushEvent("🔴 "+p.name+" naar BOYS gezet door monitor.","join");
+  }
+  else if (action==="girls") {
+    p.team="blue";
+    broadcast({type:"action",action:"team",player:p.id,team:"blue",name:p.name});
+    pushEvent("🔵 "+p.name+" naar GIRLS gezet door monitor.","join");
+  }
+  else if (action==="remove") { players.delete(p.id); pushEvent("🗑️ "+p.name+" verwijderd door monitor.","system"); }
+  else return res.status(400).json({ok:false,error:"Unknown action"});
+  broadcastState(); res.json({ok:true});
+});
+app.get("/api/health", (_,res)=>res.json({ok:true,status:tiktokStatus,players:players.size}));
+
+wss.on("connection", ws => {
+  ws.send(JSON.stringify(serialize()));
+  ws.on("message", raw => {
+    try {
+      const m = JSON.parse(raw.toString());
+      if (m.type === "ping") ws.send(JSON.stringify({type:"pong"}));
+    } catch {}
+  });
+});
+
+// Game physics blijft op 20 FPS, maar volledige WebSocket-state gaat op 10 FPS.
+// Dit voorkomt onnodig hoge CPU/bandbreedtebelasting op de Render free tier.
+let lastStateBroadcast = 0;
+setInterval(() => {
+  updateArenaPhysics();
+  if (gameActive && now() - roundStarted >= Number(config.roundSeconds || 120)*1000) resetRound();
+  if (now() - lastStateBroadcast >= 100) {
+    lastStateBroadcast = now();
+    broadcastState();
+  }
+}, 50);
+
+server.listen(PORT, async () => {
+  console.log(`Battle Arena v2 running on http://localhost:${PORT}`);
+  await connectTikTok();
+  scheduleTikTokReconnect();
+});
