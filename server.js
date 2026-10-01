@@ -220,23 +220,28 @@ function boss(p) {
 }
 function command(p, cmd) {
   const c = normalize(cmd);
-  if (tiktokStatus !== "connected") return;
   const teamCommand = config.commands.boys?.map(normalize).includes(c) || config.commands.girls?.map(normalize).includes(c);
+  // Team selection is the core BOYS vs GIRLS mechanic. It must never be blocked
+  // by the old combat/gameActive checks and it never gives or removes points.
+  if (teamCommand) {
+    if (config.commands.boys?.map(normalize).includes(c)) {
+      p.team = "red";
+      pushEvent(`🔵 ${p.name} joins BOYS!`, "join");
+      broadcast({ type:"action", action:"team", player:p.id, team:"red", name:p.name });
+    } else if (config.commands.girls?.map(normalize).includes(c)) {
+      p.team = "blue";
+      pushEvent(`🩷 ${p.name} joins GIRLS!`, "join");
+      broadcast({ type:"action", action:"team", player:p.id, team:"blue", name:p.name });
+    }
+    broadcastState();
+    return;
+  }
+  if (tiktokStatus !== "connected" || !gameActive) return;
   if (!p.team && !teamCommand) {
     pushEvent(`⚠️ ${p.name} must choose BOYS or GIRLS first.`, "warn");
     return;
   }
-  if (config.commands.boys?.map(normalize).includes(c)) {
-    p.team = "red";
-    p.score += 15; addXp(p, 10);
-    pushEvent(`🔴 ${p.name} kiest BOYS!`, "join");
-    broadcast({ type:"action", action:"team", player:p.id, team:"red", name:p.name });
-  } else if (config.commands.girls?.map(normalize).includes(c)) {
-    p.team = "blue";
-    p.score += 15; addXp(p, 10);
-    pushEvent(`🔵 ${p.name} kiest GIRLS!`, "join");
-    broadcast({ type:"action", action:"team", player:p.id, team:"blue", name:p.name });
-  } else if (config.commands.join.map(normalize).includes(c)) {
+  if (config.commands.join.map(normalize).includes(c)) {
     p.score += 25; addXp(p, 20); p.energy = Math.min(100, p.energy + 10);
     pushEvent(`🟢 ${p.name} doet mee aan de arena!`, "join");
   } else if (config.commands.attack.map(normalize).includes(c)) attack(p, 1, "comment");
@@ -981,8 +986,6 @@ app.post("/api/control", async (req,res) => {
       const team = a==="boys" ? "red" : "blue";
       const p = getOrCreate(req.body?.name||"Test Viewer","monitor-team-"+Date.now());
       p.team = team;
-      p.score += 15;
-      addXp(p,10);
       broadcast({type:"action",action:"team",player:p.id,team,name:p.name});
       pushEvent((team==="red"?"🔴 ":"🔵 ")+p.name+" joins "+(team==="red"?"BOYS":"GIRLS")+" (test)","join");
     } else if(a==="like") {
@@ -1015,12 +1018,12 @@ app.post("/api/player-control", (req,res) => {
   const id = Number(req.body?.id), p = players.get(id), action = normalize(req.body?.action);
   if (!p) return res.status(404).json({ok:false,error:"Player not found"});
   if (action==="boys") {
-    p.team="red"; p.score+=15; addXp(p,10);
+    p.team="red";
     broadcast({type:"action",action:"team",player:p.id,team:"red",name:p.name});
     pushEvent("🔴 "+p.name+" naar BOYS gezet door monitor.","join");
   }
   else if (action==="girls") {
-    p.team="blue"; p.score+=15; addXp(p,10);
+    p.team="blue";
     broadcast({type:"action",action:"team",player:p.id,team:"blue",name:p.name});
     pushEvent("🔵 "+p.name+" naar GIRLS gezet door monitor.","join");
   }
