@@ -19,7 +19,7 @@
 </style>
 </head>
 <body><div class="app" id="app">
-<div class="loading" id="loading">
+<div class="loading gameHidden" id="loading">
   <div class="loadingBox">
     <div class="loadingLogo">⚡</div>
     <div class="loadingTitle">BOYS VS GIRLS</div>
@@ -28,7 +28,7 @@
     <div class="loadingStatus" id="loadingStatus">CONNECTING...</div>
   </div>
 </div>
-<div id="gameContent" class="gameHidden">
+<div id="gameContent">
 <div class="top"><span class="live">● LIVE</span><span id="status" class="status">TIKTOK: CONNECTING...</span><div class="title">BOYS ⚡ GIRLS</div><div class="sub">LIVE TEAM BATTLE • EVERY LIKE MAKES A DIFFERENCE</div><div class="sub" style="margin-top:3px;color:#fff8">GAME MADE BY LORENZOLAVIDO</div>
 <div class="scores"><div class="team boys">🔵 BOYS<span class="num" id="boys">0</span></div><div class="timer" id="timer">2:00</div><div class="team girls" style="text-align:right">GIRLS 🩷<span class="num" id="girls">0</span></div></div></div>
 <div class="feed" id="feed"></div><div class="bigfx" id="fx"></div>
@@ -74,10 +74,13 @@ function playBeat(){if(!musicOn)return;const s=musicStep++%32;if(s%4===0)kick();
 function connect(){ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);if(m.type==='feed')feed(m.item);if(m.type==='action')action(m)}catch{}};ws.onclose=()=>setTimeout(connect,1500);ws.onerror=()=>setStatus('error')}
 function setStatus(s){
   const connected=s==='connected';
-  $('status').textContent=connected?'TIKTOK LIVE: CONNECTED':'TIKTOK: '+String(s||'OFFLINE').toUpperCase();
-  $('loading').classList.toggle('gameHidden',connected);
-  $('gameContent').classList.toggle('gameHidden',!connected);
-  $('loadingStatus').textContent=connected?'CONNECTED':'RECONNECTING TO TIKTOK LIVE...';
+  const label=s==='connecting'?'CONNECTING':s==='error'?'CONNECTION ERROR':s==='offline'?'WAITING FOR LIVE':'CONNECTED';
+  $('status').textContent=connected?'TIKTOK LIVE: CONNECTED':'TIKTOK: '+label;
+  // Never hide the actual game from viewers while the backend reconnects.
+  // The game shell is visible immediately; the status badge tells the viewer what is happening.
+  $('loading').classList.add('gameHidden');
+  $('gameContent').classList.remove('gameHidden');
+  $('loadingStatus').textContent=connected?'CONNECTED':label;
 }
 function render(s){state=s;window.remoteMusicOn=!!s.musicOn;const err=s.tiktokError?String(s.tiktokError):'';$('loadingText').textContent=s.tiktokStatus==='connecting'?'Connecting to @'+(s.config?.tiktokUsername||'LorenzoLavido')+'…':s.tiktokStatus==='error'?'TikTok connection error: '+err:s.tiktokStatus==='offline'?'Waiting for @'+(s.config?.tiktokUsername||'LorenzoLavido')+' to go LIVE…':'TikTok LIVE connected.';if(s.musicOn&&audioCtx)startMusic();if(!s.musicOn&&musicOn)stopMusic();setStatus(s.tiktokStatus);const final=(s.remaining||0)<=10;$('timer').classList.toggle('final',final);if(final&&!window.finalShown){window.finalShown=true;fx('🔥 FINAL BATTLE!')}if(!final)window.finalShown=false;let b=0,g=0;s.players.forEach(p=>{if(p.team==='red')b+=p.score;else if(p.team==='blue')g+=p.score});$('boys').textContent=b.toLocaleString();$('girls').textContent=g.toLocaleString();const total=Math.max(1,b+g);const redPct=(b/total)*100;const bluePct=(g/total)*100;$('barRed').style.width=redPct+'%';$('barBlue').style.width=bluePct+'%';$('barRedScore').textContent=b.toLocaleString();$('barBlueScore').textContent=g.toLocaleString();$('powerText').textContent=final?'🔥 FINAL BATTLE':(b===g?'⚡ DEAD EVEN — CHOOSE YOUR TEAM!':b>g?'🔵 BOYS ARE LEADING!':'🩷 GIRLS ARE LEADING!');$('barRed').style.filter=redPct>bluePct?'brightness(1.18)':'brightness(.92)';$('barBlue').style.filter=bluePct>redPct?'brightness(1.18)':'brightness(.92)';const left=Math.max(0,s.remaining||0);$('timer').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');renderSupporters(s.players)}
 function renderSupporters(players){const groups={boysLikes:[],girlsLikes:[],boysGifts:[],girlsGifts:[]};for(const p of players){if(p.team!=='red'&&p.team!=='blue')continue;const side=p.team==='red'?'boys':'girls';groups[side+'Likes'].push(p);groups[side+'Gifts'].push(p)}for(const k of Object.keys(groups)){const metric=k.endsWith('Likes')?'likesGiven':'giftsGiven';groups[k].sort((a,b)=>(b[metric]||0)-(a[metric]||0)||b.score-a.score);const el=$(k);el.innerHTML=groups[k].slice(0,3).map((p,i)=>'<div class="supportLine"><b>#'+(i+1)+' '+safeName(p.name)+'</b> '+(p[metric]||0)+'</div>').join('')||'<div class="supportLine">—</div>'}}
