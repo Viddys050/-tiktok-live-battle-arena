@@ -65,6 +65,9 @@ let tiktokStatus = "offline";
 let tiktokError = "";
 let reconnectTimer = null;
 let reconnectKickTimer = null;
+let livePreviewBrowser = null;
+let livePreviewPage = null;
+let livePreviewBusy = false;
 let reconnectInProgress = false;
 let round = 1;
 let roundStarted = Date.now();
@@ -890,6 +893,52 @@ function resetRound() {
   pushEvent(`🏁 Ronde ${round} begint!`, "round");
   broadcastState();
 }
+
+async function getLivePreviewPage() {
+  if (livePreviewPage && !livePreviewPage.isClosed()) return livePreviewPage;
+  if (!livePreviewBrowser) {
+    livePreviewBrowser = await playwright.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true
+    });
+  }
+  livePreviewPage = await livePreviewBrowser.newPage({
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+    viewport: { width: 960, height: 540 },
+    deviceScaleFactor: 1
+  });
+  await livePreviewPage.goto(
+    `https://www.tiktok.com/@${encodeURIComponent(config.tiktokUsername)}/live`,
+    { waitUntil: "domcontentloaded", timeout: 30000 }
+  );
+  await livePreviewPage.waitForTimeout(5000);
+  return livePreviewPage;
+}
+
+app.get("/api/live-preview.jpg", async (_,res) => {
+  if (!config.tiktokUsername) return res.status(400).json({ok:false,error:"TikTok username is not configured"});
+  if (livePreviewBusy) return res.status(429).end();
+  livePreviewBusy = true;
+  try {
+    const page = await getLivePreviewPage();
+    const url = `https://www.tiktok.com/@${encodeURIComponent(config.tiktokUsername)}/live`;
+    if (!page.url().includes(`/@${encodeURIComponent(config.tiktokUsername)}/live`)) {
+      await page.goto(url, { waitUntil:"domcontentloaded", timeout:30000 });
+      await page.waitForTimeout(3000);
+    }
+    const jpg = await page.screenshot({type:"jpeg",quality:72});
+    res.set("Cache-Control","no-store, no-cache, must-revalidate");
+    res.type("image/jpeg").send(jpg);
+  } catch (err) {
+    console.error("LIVE preview error:", err?.message || err);
+    try { await livePreviewPage?.close(); } catch {}
+    livePreviewPage = null;
+    res.status(503).json({ok:false,error:String(err?.message || err)});
+  } finally {
+    livePreviewBusy = false;
+  }
+});
 
 app.get("/api/state", (_,res) => res.json(serialize()));
 app.get("/api/config", (_,res) => res.json(config));
