@@ -68,6 +68,7 @@ let reconnectKickTimer = null;
 let livePreviewBrowser = null;
 let livePreviewPage = null;
 let livePreviewBusy = false;
+let livePreviewInitPromise = null;
 let reconnectInProgress = false;
 let round = 1;
 let roundStarted = Date.now();
@@ -912,7 +913,7 @@ async function launchLivePreviewBrowser() {
   return browser;
 }
 
-async function getLivePreviewPage() {
+async function _getLivePreviewPage() {
   if (livePreviewPage && !livePreviewPage.isClosed() && livePreviewBrowser?.isConnected()) {
     return livePreviewPage;
   }
@@ -976,6 +977,15 @@ async function getLivePreviewPage() {
   }
   await livePreviewPage.waitForTimeout(3500);
   return livePreviewPage;
+}
+async function getLivePreviewPage() {
+  // Only one Playwright/Chromium initialization may run at a time.
+  // Render can return ETXTBSY when two requests try to spawn /tmp/chromium together.
+  if (livePreviewInitPromise) return livePreviewInitPromise;
+  livePreviewInitPromise = _getLivePreviewPage().finally(() => {
+    livePreviewInitPromise = null;
+  });
+  return livePreviewInitPromise;
 }
 app.get("/api/live-preview.jpg", async (_,res) => {
   if (!config.tiktokUsername) return res.status(400).json({ok:false,error:"TikTok username is not configured"});
