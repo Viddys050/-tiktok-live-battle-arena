@@ -977,7 +977,15 @@ app.post("/api/control", async (req,res) => {
     const a=req.body?.gameAction||"attack";
     // The control-room visual tests for the BOYS/GIRLS screen are isolated from
     // the legacy combat actions. They only emit the exact frontend visual event.
-    if(a==="like") {
+    if(a==="boys" || a==="girls") {
+      const team = a==="boys" ? "red" : "blue";
+      const p = getOrCreate(req.body?.name||"Test Viewer","monitor-team-"+Date.now());
+      p.team = team;
+      p.score += 15;
+      addXp(p,10);
+      broadcast({type:"action",action:"team",player:p.id,team,name:p.name});
+      pushEvent((team==="red"?"🔴 ":"🔵 ")+p.name+" joins "+(team==="red"?"BOYS":"GIRLS")+" (test)","join");
+    } else if(a==="like") {
       broadcast({type:"action",action:"like",player:"test-like",team:req.body?.team==="blue"?"blue":"red",count:1,likeCount:1,name:req.body?.name||"Test Viewer",finalBattle:false});
     } else if(a==="gift") {
       broadcast({type:"action",action:"giftReceived",player:"test-gift",team:req.body?.team==="red"?"red":"blue",name:req.body?.name||"Test Viewer",giftName:req.body?.giftName||"Rose",count:1});
@@ -1006,13 +1014,16 @@ app.post("/api/demo", (req,res) => {
 app.post("/api/player-control", (req,res) => {
   const id = Number(req.body?.id), p = players.get(id), action = normalize(req.body?.action);
   if (!p) return res.status(404).json({ok:false,error:"Player not found"});
-  if (action==="attack") attack(p,Number(req.body?.strength)||1,"monitor");
-  else if (action==="shield") shield(p);
-  else if (action==="rage") rage(p);
-  else if (action==="boss") { p.energy=Math.max(70,p.energy); boss(p); }
-  else if (action==="heal") { p.hp=p.maxHp; p.alive=true; pushEvent("💚 "+p.name+" volledig geheeld door monitor.","system"); }
-  else if (action==="energy") { p.energy=100; pushEvent("⚡ Energie van "+p.name+" gevuld.","system"); }
-  else if (action==="randomize") { p.x=10+Math.random()*80; p.y=17+Math.random()*58; pushEvent("📍 "+p.name+" verplaatst.","system"); }
+  if (action==="boys") {
+    p.team="red"; p.score+=15; addXp(p,10);
+    broadcast({type:"action",action:"team",player:p.id,team:"red",name:p.name});
+    pushEvent("🔴 "+p.name+" naar BOYS gezet door monitor.","join");
+  }
+  else if (action==="girls") {
+    p.team="blue"; p.score+=15; addXp(p,10);
+    broadcast({type:"action",action:"team",player:p.id,team:"blue",name:p.name});
+    pushEvent("🔵 "+p.name+" naar GIRLS gezet door monitor.","join");
+  }
   else if (action==="remove") { players.delete(p.id); pushEvent("🗑️ "+p.name+" verwijderd door monitor.","system"); }
   else return res.status(400).json({ok:false,error:"Unknown action"});
   broadcastState(); res.json({ok:true});
