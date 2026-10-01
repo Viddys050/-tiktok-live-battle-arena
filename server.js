@@ -61,6 +61,7 @@ let reconnectTimer = null;
 let reconnectInProgress = false;
 let round = 1;
 let roundStarted = Date.now();
+let gameActive = false;
 let totalLikes = 0;
 let totalGifts = 0;
 let musicOn = false;
@@ -104,7 +105,7 @@ function createPlayer(name, uniqueId="") {
   const id = nextPlayerId++;
   const player = {
     id, uniqueId: uniqueId || `viewer${id}`, name: cleanName(name),
-    team: teamFor(id), level: 1, xp: 0, power: 100, hp: 100, maxHp: 100,
+    team: null, level: 1, xp: 0, power: 100, hp: 100, maxHp: 100,
     score: 0, energy: 0, combo: 0, likesGiven: 0, giftsGiven: 0, lastSeen: now(), alive: true,
     x: 10 + Math.random() * 80, y: 17 + Math.random() * 58,
     vx: (Math.random() * 2 - 1) * 0.22, vy: (Math.random() * 2 - 1) * 0.16,
@@ -147,7 +148,7 @@ function enemyOf(p) {
   return enemies.sort((a,b) => a.hp - b.hp || b.score - a.score)[0];
 }
 function attack(p, strength=1, source="comment") {
-  if (!p.alive) return;
+  if (tiktokStatus !== "connected" || !p.alive || !p.team) return;
   const target = enemyOf(p);
   p.energy = Math.min(100, p.energy + 8 * strength);
   p.score += 10 * strength;
@@ -176,6 +177,7 @@ function attack(p, strength=1, source="comment") {
   }
 }
 function shield(p) {
+  if (tiktokStatus !== "connected" || !p.team) return;
   p.energy = Math.min(100, p.energy + 20);
   p.hp = Math.min(p.maxHp, p.hp + 18);
   p.score += 12;
@@ -184,6 +186,7 @@ function shield(p) {
   pushEvent(`🛡️ ${p.name} activeert SHIELD!`, "shield");
 }
 function rage(p) {
+  if (tiktokStatus !== "connected" || !p.team) return;
   p.energy = Math.min(100, p.energy + 50);
   p.power += 4;
   p.score += 40;
@@ -192,6 +195,7 @@ function rage(p) {
   pushEvent(`⚡ ${p.name} activeert RAGE!`, "rage");
 }
 function boss(p) {
+  if (tiktokStatus !== "connected" || !p.team) return;
   if (p.energy < 70) {
     pushEvent(`🔒 ${p.name} heeft 70 energie nodig voor BOSS.`, "warn");
     return;
@@ -206,6 +210,12 @@ function boss(p) {
 }
 function command(p, cmd) {
   const c = normalize(cmd);
+  if (tiktokStatus !== "connected") return;
+  const teamCommand = config.commands.boys?.map(normalize).includes(c) || config.commands.girls?.map(normalize).includes(c);
+  if (!p.team && !teamCommand) {
+    pushEvent(`⚠️ ${p.name} must choose BOYS or GIRLS first.`, "warn");
+    return;
+  }
   if (config.commands.boys?.map(normalize).includes(c)) {
     p.team = "red";
     p.score += 15; addXp(p, 10);
@@ -247,6 +257,7 @@ function handleLike(data) {
   const count = Math.max(1, Number(data.likeCount || data.likeCount || 1));
   if (!canDo("like", uid, Number(config.likeCooldownMs || 350))) return;
   const p = getOrCreate(name, uid);
+  if (tiktokStatus !== "connected" || !p.team) return;
   const finalBattle = getRoundRemaining() <= 10;
   const power = finalBattle ? 3 : 1;
   p.energy = Math.min(100, p.energy + Math.min(25, count) * power);
@@ -265,6 +276,7 @@ function handleGift(data) {
   const count = Math.max(1, Number(data.repeatCount || 1));
   const diamond = Number(data.giftDetails?.diamondCount || data.diamondCount || data.extendedGiftInfo?.diamondCount || 0);
   const p = getOrCreate(name, uid);
+  if (tiktokStatus !== "connected" || !p.team) return;
   totalGifts += count;
   p.giftsGiven += count;
   const giftKey = normalize(giftName);
@@ -302,6 +314,7 @@ function handleMember(data) {
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
   const uid = data.user?.uniqueId || data.uniqueId || name;
   const p = getOrCreate(name, uid);
+  if (tiktokStatus !== "connected" || !p.team) return;
   p.score += 5;
   p.lastSeen = now();
 }
@@ -314,7 +327,7 @@ function serialize() {
     type: "state",
     round, roundSeconds: Number(config.roundSeconds || 120),
     remaining: Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now()-roundStarted)/1000)),
-    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError,
+    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError, gameActive,
     players: list, feed: events.slice(0, 20),
     giftStats: [...giftStats.values()].sort((a,b) => b.count - a.count),
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
@@ -634,7 +647,15 @@ async function connectTikTok() {
       console.log("Room ID:", state?.roomId || "unknown");
       tiktokStatus = "connected";
       tiktokError = "";
-      pushEvent(`🟢 Connected to @${username}`, "system");
+      gameActive = true;
+      round++;
+      roundStarted = Date.now();
+      for (const p of players.values()) players.delete(p.id);
+      totalLikes = 0;
+      totalGifts = 0;
+      giftStats.clear();
+      events = [];
+      pushEvent(`🟢 Connected to @${username} — game is LIVE!`, "system");
       broadcastState();
     });
 
@@ -642,13 +663,20 @@ async function connectTikTok() {
       console.log("=== TIKTOK DISCONNECTED ===");
       console.log(info || "");
       tiktokStatus = "offline";
+      gameActive = false;
       broadcastState();
+      if (!reconnectInProgress) {
+        setTimeout(() => {
+          if (tiktokStatus !== "connected" && !reconnectInProgress) connectTikTok();
+        }, 1500);
+      }
     });
 
     tiktok.on("error", (err) => {
       console.error("=== TIKTOK ERROR ===");
       console.error(err);
       tiktokStatus = "error";
+      gameActive = false;
       tiktokError = String(err?.message || err);
       pushEvent(`🔴 TikTok error: ${tiktokError}`, "error");
       broadcastState();
@@ -665,6 +693,7 @@ async function connectTikTok() {
     console.error(err);
 
     tiktokStatus = "offline";
+    gameActive = false;
     const message = String(err?.message || err || "Unknown TikTok connection error");
     tiktokError = message.length > 240 ? message.slice(0, 237) + "..." : message;
     console.log("TikTok connection attempt failed. Will retry automatically.");
@@ -846,7 +875,7 @@ wss.on("connection", ws => {
 let lastStateBroadcast = 0;
 setInterval(() => {
   updateArenaPhysics();
-  if (now() - roundStarted >= Number(config.roundSeconds || 120)*1000) resetRound();
+  if (gameActive && now() - roundStarted >= Number(config.roundSeconds || 120)*1000) resetRound();
   if (now() - lastStateBroadcast >= 100) {
     lastStateBroadcast = now();
     broadcastState();
