@@ -152,7 +152,7 @@ details{border:1px solid #1e2d42;border-radius:10px;background:#080f1a}details s
 <div class="card">
 <h3>🎁 Gifts — LIVE statistics</h3>
 <div id="giftstats" class="giftstats"><div class="muted">Waiting for gifts...</div></div>
-<div class="note">Gifts are recorded for monitoring and create visual reactions in the game; they do not change gameplay power or winner.</div>
+<div class="note">🎁 Gifts trigger fixed in-game effects only. Current tiers: 🌹 1🪙 +25 HP · 💗 5🪙 +100 HP · ✨ 20🪙 10s shield · 💗 20🪙 +250 HP · 🌌 100🪙 team +500 HP. No cash prizes, betting or random rewards.</div>
 </div>
 </section>
 
@@ -169,11 +169,11 @@ details{border:1px solid #1e2d42;border-radius:10px;background:#080f1a}details s
 <label class="span2">SHIELD commands<input id="cmdShield"></label>
 <label class="span2">RAGE commands<input id="cmdRage"></label>
 <label class="span2">BOSS commands<input id="cmdBoss"></label>
-<label>Rose →<input id="giftRose"></label>
-<label>Finger Heart →<input id="giftFinger"></label>
-<label>Perfume →<input id="giftPerfume"></label>
-<label>Heart Me →<input id="giftHeart"></label>
-<label>Galaxy →<input id="giftGalaxy"></label>
+<label>🌹 Rose →<input id="giftRose" value="heal25"></label>
+<label>💗 Finger Heart →<input id="giftFinger" value="heal100"></label>
+<label>✨ Perfume →<input id="giftPerfume" value="shield10"></label>
+<label>💗 Heart Me →<input id="giftHeart" value="heal250"></label>
+<label>🌌 Galaxy →<input id="giftGalaxy" value="teamheal500"></label>
 </div>
 <div style="margin-top:9px"><button class="primary" onclick="save()">💾 Save settings</button> <span id="saved" class="ok"></span></div>
 <div class="note">Saving settings reconnects the TikTok listener so the new configuration becomes active.</div>
