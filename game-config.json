@@ -45,10 +45,37 @@
     ]
   },
   "gifts": {
-    "rose": "attack",
-    "finger heart": "shield",
-    "perfume": "rage",
-    "heart me": "rage",
-    "galaxy": "boss"
+    "rose": "heal25",
+    "finger heart": "heal100",
+    "perfume": "shield10",
+    "heart me": "heal250",
+    "galaxy": "teamheal500"
+  },
+  "giftRules": {
+    "rose": {
+      "coins": 1,
+      "effect": "heal25",
+      "label": "+25 HP"
+    },
+    "finger heart": {
+      "coins": 5,
+      "effect": "heal100",
+      "label": "+100 HP"
+    },
+    "perfume": {
+      "coins": 20,
+      "effect": "shield10",
+      "label": "10s SHIELD"
+    },
+    "heart me": {
+      "coins": 20,
+      "effect": "heal250",
+      "label": "+250 HP"
+    },
+    "galaxy": {
+      "coins": 100,
+      "effect": "teamheal500",
+      "label": "TEAM +500 HP"
+    }
   }
 }
