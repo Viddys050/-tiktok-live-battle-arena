@@ -241,13 +241,39 @@ function rawTikTokEvent(event, data) { try { broadcast({ type:"rawEvent", event,
 function bindTikTokEvent(name, eventName) { try { tiktok.on(name, data => rawTikTokEvent(eventName, data)); } catch {} }
 function handleChat(data) {
   rawTikTokEvent("CHAT", data);
-  const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
-  const uid = data.user?.uniqueId || data.uniqueId || name;
-  const comment = String(data.comment || "").trim();
+  if (tiktokStatus !== "connected" || !gameActive) return;
+
+  const user = data?.user || {};
+  const name = user.nickname || data?.nickname || data?.uniqueId || "Viewer";
+  const uid = user.uniqueId || data?.uniqueId || name;
+  const comment = String(
+    data?.comment ??
+    data?.text ??
+    data?.message?.comment ??
+    ""
+  ).trim();
+
+  if (!comment) return;
+
   const p = getOrCreate(name, uid);
-  if (!canDo("chat", uid, Number(config.commentCooldownMs || 700))) return;
-  pushEvent(`💬 ${cleanName(name)}: ${comment}`, "chat");
   const first = normalize(comment).split(/\s+/)[0];
+
+  // Team selection is never blocked by the normal chat cooldown.
+  // BOYS / GIRLS must work immediately when the LIVE is connected.
+  const isTeamCommand =
+    config.commands.boys?.map(normalize).includes(first) ||
+    config.commands.girls?.map(normalize).includes(first);
+
+  if (isTeamCommand) {
+    command(p, first);
+    pushEvent(`🎯 ${cleanName(name)} selected ${first.toUpperCase()}`, "system");
+    broadcastState();
+    return;
+  }
+
+  if (!canDo("chat", uid, Number(config.commentCooldownMs || 700))) return;
+
+  pushEvent(`💬 ${cleanName(name)}: ${comment}`, "chat");
   command(p, first);
 }
 function handleLike(data) {
@@ -650,7 +676,7 @@ async function connectTikTok() {
       gameActive = true;
       round++;
       roundStarted = Date.now();
-      for (const p of players.values()) players.delete(p.id);
+      players.clear();
       totalLikes = 0;
       totalGifts = 0;
       giftStats.clear();
@@ -665,11 +691,14 @@ async function connectTikTok() {
       tiktokStatus = "offline";
       gameActive = false;
       broadcastState();
-      if (!reconnectInProgress) {
-        setTimeout(() => {
-          if (tiktokStatus !== "connected" && !reconnectInProgress) connectTikTok();
-        }, 1500);
-      }
+
+      // The disconnect event can fire while connectTikTok() is still unwinding.
+      // Do not rely on reconnectInProgress here; always schedule a fresh attempt.
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (tiktokStatus !== "connected" && !reconnectInProgress) connectTikTok();
+      }, 2000);
     });
 
     tiktok.on("error", (err) => {
@@ -708,7 +737,7 @@ function scheduleTikTokReconnect() {
   reconnectTimer = setInterval(async () => {
     if (tiktokStatus === "connected" || reconnectInProgress) return;
     await connectTikTok();
-  }, 30000);
+  }, 5000);
 }
 function updateArenaPhysics() {
   const active = [...players.values()].filter(p => p.alive);
