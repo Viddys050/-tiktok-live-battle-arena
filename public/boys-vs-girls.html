@@ -126,6 +126,13 @@ function renderTanks(){for(const team of ['red','blue']){const d=tankState[team]
 function addTankToken(team,kind,name,icon,label){if(team!=='red'&&team!=='blue')return;const d=tankState[team];const side=team==='red'?'boys':'girls';const box=$(side+'Tokens');const e=document.createElement('div');e.className='token '+(kind==='gift'?'giftToken':'heartToken');e.innerHTML='<span class="tokenIcon">'+icon+'</span><span class="tokenName">'+safeName(name||'Viewer')+'</span>'+(label?'<span>'+safeName(label)+'</span>':'');e.style.left=(2+Math.random()*70)+'%';e.style.bottom=(3+Math.random()*78)+'%';box.appendChild(e);d.tokens.push(e);while(d.tokens.length>80){const old=d.tokens.shift();old?.remove()}renderTanks()}
 function addFallingHeart(team,name){const side=team==='red'?'boys':'girls';const box=$(side+'Tokens');const h=document.createElement('div');h.className='fallHeart';h.textContent='❤️';h.title=name||'Viewer';h.style.left=(5+Math.random()*85)+'%';h.style.animationDuration=(1.7+Math.random()*.9)+'s';box.appendChild(h);setTimeout(()=>h.remove(),3000)}
 function addLikeTokens(team,name,count){if(team!=='red'&&team!=='blue')return;const n=Math.max(1,Math.min(12,Number(count)||1));tankState[team].likes+=Number(count)||1;for(let i=0;i<n;i++){addTankToken(team,'like',name,'❤');addFallingHeart(team,name)}renderTanks()}
+function addGiftToken(team,name,giftName,count){
+  if(team!=='red'&&team!=='blue')return;
+  const d=tankState[team];
+  d.gifts+=Number(count)||1;
+  addTankToken(team,'gift',name,giftIcon(giftName),giftName+(count>1?' ×'+count:''));
+  renderTanks();
+}
 function upsert(p){}
 function feed(i){if(!i||seen.has(i.id))return;seen.add(i.id);const d=document.createElement('div');d.className='event';d.textContent=i.text;$('feed').appendChild(d);while($('feed').children.length>5)$('feed').firstChild.remove();setTimeout(()=>d.remove(),6000)}
 function fx(t){const e=$('fx');e.textContent=t;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
