@@ -313,6 +313,7 @@ function serialize() {
     remaining: Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now()-roundStarted)/1000)),
     totalLikes, totalGifts, tiktokStatus, tiktokError,
     players: list, feed: events.slice(0, 20),
+    giftStats: [...giftStats.values()].sort((a,b) => b.count - a.count),
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
     roomId: lastRoomId,
     config: {
