@@ -304,6 +304,12 @@ function handleGift(data) {
   const diamond = Number(data.giftDetails?.diamondCount || data.diamondCount || data.extendedGiftInfo?.diamondCount || 0);
   const p = getOrCreate(name, uid);
   if (tiktokStatus !== "connected" || !p.team) return;
+
+  // TikTok can emit multiple events while a streakable Gift is in progress.
+  // Record the event, but only trigger one visual reaction for the final streak event.
+  const giftType = Number(data.giftDetails?.giftType || data.giftType || 0);
+  const repeatEnd = data.repeatEnd === true;
+  const isStreakProgress = giftType === 1 && !repeatEnd;
   totalGifts += count;
   p.giftsGiven += count;
   const giftKey = normalize(giftName);
@@ -313,10 +319,20 @@ function handleGift(data) {
   previousGift.diamonds += diamond * count;
   giftStats.set(giftKey, previousGift);
 
-  // Gifts are recorded for moderation/statistics only. They no longer give gameplay power,
-  // score, attacks, or other advantages. This avoids making Gifts a gameplay incentive.
-  pushEvent(`🎁 ${p.name} received ${giftName} ×${count}`, "gift");
-  broadcast({ type:"action", action:"giftReceived", player:p.id, giftName, count });
+  // Gifts are a visual LIVE interaction only. They never change gameplay, score, power,
+  // health, energy, team strength, or the winner.
+  pushEvent(`🎁 ${p.name} sent ${giftName} ×${count}`, "gift");
+  if (!isStreakProgress) {
+    broadcast({
+      type:"action",
+      action:"giftReceived",
+      player:p.id,
+      team:p.team,
+      name:p.name,
+      giftName,
+      count
+    });
+  }
 }
 function handleMember(data) {
   rawTikTokEvent("MEMBER", data);
