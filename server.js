@@ -598,18 +598,29 @@ async function getTikTokRoomId(username) {
     }
   });
 
-  const text = await response.text();
-  let data;
-  try { data = JSON.parse(text); }
-  catch { throw new Error(`TikTok API returned non-JSON HTTP ${response.status}`); }
+  try {
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { throw new Error(`TikTok API returned non-JSON HTTP ${response.status}`); }
 
-  if (!response.ok || data?.statusCode) {
-    throw new Error(`TikTok API error HTTP ${response.status}: ${data?.statusCode || ""} ${data?.message || ""}${signError ? `; signed lookup also failed: ${signError.message}` : ""}`);
+    if (!response.ok || data?.statusCode) {
+      throw new Error(`TikTok API error HTTP ${response.status}: ${data?.statusCode || ""} ${data?.message || ""}`);
+    }
+
+    const roomId = data?.data?.user?.roomId || data?.data?.liveRoom?.roomId;
+    if (roomId) return String(roomId);
+    throw new Error("TikTok API returned no LIVE room ID");
+  } catch (apiError) {
+    console.log("Direct TikTok API lookup failed:", apiError?.message || apiError);
   }
 
-  const roomId = data?.data?.user?.roomId || data?.data?.liveRoom?.roomId;
-  if (!roomId) throw new Error("TikTok API returned no LIVE room ID");
-  return String(roomId);
+  // Last resort: Chromium. This is intentionally last because it is the slowest
+  // method and is only needed when TikTok hides the room ID from HTTP responses.
+  const browserRoomId = await getTikTokRoomIdWithBrowser(username);
+  if (browserRoomId) return String(browserRoomId);
+
+  throw new Error(`TikTok LIVE room lookup failed. Direct page, TikRec, API and browser lookup all failed.${signError ? ` TikRec: ${signError.message}` : ""}`);
 }
 
 async function connectTikTok() {
