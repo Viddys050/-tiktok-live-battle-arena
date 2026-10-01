@@ -387,20 +387,16 @@ function serialize() {
 function broadcastState() { broadcast(serialize()); }
 
 async function getTikTokRoomIdWithBrowser(username) {
-  // Reuse the same Chromium instance as the LIVE preview.
-  // Render can reject a second Chromium executable with ETXTBSY, so we must
-  // not launch a separate browser just to discover the room id.
+  // Use the SAME browser page as the LIVE preview. Two simultaneous TikTok
+  // pages were causing Chromium on Render to be killed, which surfaced as
+  // "Target page, context or browser has been closed".
   try {
     console.log("Trying shared Chromium LIVE room discovery...");
-    const browser = await getLivePreviewBrowser();
-    if (!browser?.isConnected()) throw new Error("Shared Chromium browser is not connected");
-    const page = await browser.newPage({
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-      viewport: { width: 960, height: 540 },
-      deviceScaleFactor: 1
-    });
-    if (!page || page.isClosed()) throw new Error("Shared Chromium created no usable page");
+    const page = await getLivePreviewPage();
+    if (!page || page.isClosed()) throw new Error("Shared Chromium LIVE preview page is not usable");
+
     const candidates = new Set();
+    const seenUrls = new Set();
 
     const inspect = (value) => {
       if (!value) return;
@@ -409,12 +405,13 @@ async function getTikTokRoomIdWithBrowser(username) {
         /["']?roomId["']?\s*[:=]\s*["']?(\d{10,})["']?/gi,
         /["']?room_id["']?\s*[:=]\s*["']?(\d{10,})["']?/gi,
         /["']?roomID["']?\s*[:=]\s*["']?(\d{10,})["']?/gi,
-        /roomId\D{0,120}(\d{10,})/gi,
-        /room_id\D{0,120}(\d{10,})/gi,
-        /webcast_id\D{0,120}(\d{10,})/gi,
-        /webcastId\D{0,120}(\d{10,})/gi,
+        /roomId\D{0,160}(\d{10,})/gi,
+        /room_id\D{0,160}(\d{10,})/gi,
+        /webcast_id\D{0,160}(\d{10,})/gi,
+        /webcastId\D{0,160}(\d{10,})/gi,
         /room_id=(\d{10,})/gi,
-        /roomId=(\d{10,})/gi
+        /roomId=(\d{10,})/gi,
+        /webcastId=(\d{10,})/gi
       ];
       for (const re of patterns) {
         for (const m of text.matchAll(re)) candidates.add(m[1]);
@@ -422,7 +419,7 @@ async function getTikTokRoomIdWithBrowser(username) {
     };
 
     const inspectJson = (value, depth = 0) => {
-      if (!value || depth > 12) return;
+      if (!value || depth > 14) return;
       if (Array.isArray(value)) {
         for (const item of value) inspectJson(item, depth + 1);
         return;
@@ -437,77 +434,77 @@ async function getTikTokRoomIdWithBrowser(username) {
       }
     };
 
-    const onResponse = async (response) => {
+    const onRequest = request => {
       try {
-        const url = response.url();
-        if (!/tiktok\.com/i.test(url)) return;
-        inspect(url);
-        if (!/live|room|webcast|api-live/i.test(url)) return;
-        const body = await response.text();
-        inspect(body);
+        const url = request.url();
+        if (/tiktok\.com/i.test(url)) {
+          seenUrls.add(url);
+          inspect(url);
+        }
       } catch {}
     };
 
+    const onResponse = async response => {
+      try {
+        const url = response.url();
+        if (!/tiktok\.com/i.test(url)) return;
+        seenUrls.add(url);
+        inspect(url);
+
+        // Read JSON/text responses that are likely to contain LIVE metadata.
+        if (/live|room|webcast|api-live|reflow|feed|user/i.test(url)) {
+          const headers = response.headers();
+          const contentType = String(headers["content-type"] || "").toLowerCase();
+          if (contentType.includes("json") || contentType.includes("text") || contentType.includes("javascript")) {
+            const body = await response.text().catch(() => "");
+            inspect(body);
+            if (body && body.length < 2000000) {
+              try { inspectJson(JSON.parse(body)); } catch {}
+            }
+          }
+        }
+      } catch {}
+    };
+
+    page.on("request", onRequest);
     page.on("response", onResponse);
 
     const liveUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}/live`;
-    if (!page.url().includes(`/@${encodeURIComponent(username)}/live`)) {
-      await page.goto(liveUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-    } else {
-      await page.reload({ waitUntil: "domcontentloaded", timeout: 30000 }).catch(() => {});
-    }
-
-    await page.waitForTimeout(7000);
-
-    inspect(page.url());
-    inspect(await page.content());
-
-    const scriptData = await page.evaluate(() => {
-      const ids = ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"];
-      const out = [];
-      for (const id of ids) {
-        const el = document.getElementById(id);
-        if (el?.textContent) out.push(el.textContent);
-      }
-      return out;
+    await page.goto(liveUrl, { waitUntil: "domcontentloaded", timeout: 30000 }).catch(err => {
+      console.log("TikTok browser navigation warning:", err?.message || err);
     });
-    for (const item of scriptData) {
-      inspect(item);
-      try { inspectJson(JSON.parse(item)); } catch {}
-    }
 
-    // TikTok can put the current LIVE roomId on the broadcaster profile
-    // rather than the /live page. Try the profile as a second browser source.
-    if (!candidates.size) {
-      const profilePage = await browser.newPage({
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
-        viewport: { width: 960, height: 540 },
-        deviceScaleFactor: 1
-      });
-      try {
-        profilePage.on("response", onResponse);
-        await profilePage.goto(`https://www.tiktok.com/@${encodeURIComponent(username)}`, {
-          waitUntil: "domcontentloaded",
-          timeout: 30000
-        });
-        await profilePage.waitForTimeout(5000);
-        inspect(profilePage.url());
-        const profileScripts = await profilePage.evaluate(() => {
-          const ids = ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"];
-          return ids.map(id => document.getElementById(id)?.textContent || "").filter(Boolean);
-        });
-        for (const item of profileScripts) {
-          inspect(item);
-          try { inspectJson(JSON.parse(item)); } catch {}
+    await page.waitForTimeout(8000);
+
+    if (!page.isClosed()) {
+      inspect(page.url());
+      const html = await page.content().catch(() => "");
+      inspect(html);
+
+      const data = await page.evaluate(() => {
+        const ids = ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"];
+        const scripts = [];
+        for (const id of ids) {
+          const el = document.getElementById(id);
+          if (el?.textContent) scripts.push(el.textContent);
         }
-      } finally {
-        profilePage.off("response", onResponse);
-        await profilePage.close().catch(() => {});
+        const links = [...document.querySelectorAll("a[href]")].map(a => a.href);
+        const metas = [...document.querySelectorAll("meta[content]")].map(m => m.content);
+        const text = document.body?.innerText || "";
+        return { scripts, links, metas, text: text.slice(0, 500000) };
+      }).catch(() => ({scripts:[],links:[],metas:[],text:""}));
+
+      for (const item of [...data.scripts, ...data.links, ...data.metas, data.text]) {
+        inspect(item);
+        try { inspectJson(JSON.parse(item)); } catch {}
       }
+
+      // A LIVE URL can itself contain the room id after TikTok redirects.
+      inspect(page.url());
     }
 
+    page.off("request", onRequest);
     page.off("response", onResponse);
-    await page.close().catch(() => {});
 
     if (candidates.size) {
       const roomId = [...candidates][0];
@@ -515,13 +512,14 @@ async function getTikTokRoomIdWithBrowser(username) {
       return roomId;
     }
 
+    const interesting = [...seenUrls].filter(u => /live|room|webcast|api-live/i.test(u)).slice(0, 25);
     console.log("Shared Chromium did not expose a LIVE room ID.");
+    console.log("TikTok browser URLs inspected:", interesting);
   } catch (err) {
     console.log("Shared Chromium room lookup failed:", err?.message || err);
   }
   return null;
 }
-
 async function getTikTokRoomId(username) {
   // Fast path first: HTTP lookups are much cheaper than starting Chromium.
   // Chromium is kept as the final fallback because it can take 10+ seconds on Render.
