@@ -104,7 +104,7 @@ function createPlayer(name, uniqueId="") {
   const player = {
     id, uniqueId: uniqueId || `viewer${id}`, name: cleanName(name),
     team: teamFor(id), level: 1, xp: 0, power: 100, hp: 100, maxHp: 100,
-    score: 0, energy: 0, combo: 0, lastSeen: now(), alive: true,
+    score: 0, energy: 0, combo: 0, likesGiven: 0, giftsGiven: 0, lastSeen: now(), alive: true,
     x: 10 + Math.random() * 80, y: 17 + Math.random() * 58,
     vx: (Math.random() * 2 - 1) * 0.22, vy: (Math.random() * 2 - 1) * 0.16,
     angle: Math.random() * 360, spin: (Math.random() * 2 - 1) * 1.8, lastCollision: 0
@@ -252,6 +252,7 @@ function handleLike(data) {
   p.score += Math.min(100, count * 2) * power;
   addXp(p, Math.min(20, count) * power);
   totalLikes += count;
+  p.likesGiven += count;
   broadcast({ type:"action", action:"like", player:p.id, count: count * power, name:p.name, finalBattle });
   pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!${finalBattle?" 🔥 FINAL BATTLE x3!":""}`, "like");
 }
@@ -264,6 +265,7 @@ function handleGift(data) {
   const diamond = Number(data.giftDetails?.diamondCount || data.diamondCount || data.extendedGiftInfo?.diamondCount || 0);
   const p = getOrCreate(name, uid);
   totalGifts += count;
+  p.giftsGiven += count;
   const giftKey = normalize(giftName);
   const previousGift = giftStats.get(giftKey) || { name: giftName, count: 0, diamonds: 0 };
   previousGift.name = giftName;
