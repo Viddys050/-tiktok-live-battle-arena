@@ -756,7 +756,10 @@ async function connectTikTok() {
 
   if (tiktok) {
     try {
-      await tiktok.disconnect();
+      await Promise.race([
+        tiktok.disconnect(),
+        new Promise(resolve => setTimeout(resolve, 1000))
+      ]);
     } catch {}
     tiktok = null;
   }
@@ -768,6 +771,7 @@ async function connectTikTok() {
     tiktokStatus = "demo";
     tiktokError = "";
     broadcastState();
+    reconnectInProgress = false;
     return;
   }
 
@@ -776,19 +780,14 @@ async function connectTikTok() {
     tiktokError = "";
     broadcastState();
 
-    // Use the connector's normal username -> LIVE resolution.
-    // This avoids forcing the external uniqueId resolver on every connection.
+    // Native connector path: username -> LIVE connection.
+    // Do not perform separate HTTP/Chromium room discovery first.
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
-      // TikTok can report a freshly discovered LIVE room as "offline" during
-      // the connector's extra room-info check. We already discovered the room
-      // directly from the LIVE page, so do not perform that second live check.
       fetchRoomInfoOnConnect: false,
       logFetchFallbackErrors: true,
-      // Keep connection attempts short. The connector's WebSocket handshake can
-      // otherwise wait around 20 seconds before surfacing a failure.
-      webClientOptions: { timeout: { request: 7000 } },
-      wsClientOptions: { handshakeTimeout: 7000 }
+      webClientOptions: { timeout: { request: 5000 } },
+      wsClientOptions: { handshakeTimeout: 5000 }
     });
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
@@ -810,6 +809,7 @@ async function connectTikTok() {
     tiktok.on("connected", (state) => {
       console.log("=== TIKTOK CONNECTED ===");
       console.log("Room ID:", state?.roomId || "unknown");
+      if (state?.roomId) lastRoomId = String(state.roomId);
       tiktokStatus = "connected";
       tiktokError = "";
       gameActive = true;
@@ -842,14 +842,11 @@ async function connectTikTok() {
       tiktokStatus = "offline";
       gameActive = false;
       broadcastState();
-
-      // The disconnect event can fire while connectTikTok() is still unwinding.
-      // Do not rely on reconnectInProgress here; always schedule a fresh attempt.
       clearTimeout(reconnectKickTimer);
       reconnectKickTimer = setTimeout(() => {
         reconnectKickTimer = null;
         if (tiktokStatus !== "connected" && !reconnectInProgress) connectTikTok();
-      }, 2000);
+      }, 1500);
     });
 
     tiktok.on("error", (err) => {
@@ -862,29 +859,19 @@ async function connectTikTok() {
       broadcastState();
     });
 
-    // Resolve the LIVE room once, then pass the explicit roomId to the connector.
-    // This avoids making tiktok-live-connector repeat its own room lookup.
-    // It also lets the control room show the exact room we are trying to enter.
-    const roomId = await getTikTokRoomId(username);
-    if (!roomId) throw new Error("TikTok is not LIVE or no room ID could be resolved.");
-    lastRoomId = String(roomId);
-    broadcastState();
-    console.log("Calling tiktok.connect(roomId):", roomId);
-    const connectPromise = tiktok.connect(roomId);
+    console.log("Calling tiktok.connect() directly...");
+    const connectPromise = tiktok.connect();
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("TikTok WebSocket connection timed out after 15000ms")), 15000)
+      setTimeout(() => reject(new Error("TikTok connection timed out after 9000ms")), 9000)
     );
     const result = await Promise.race([connectPromise, timeoutPromise]);
 
     console.log("=== TIKTOK CONNECT() RESOLVED ===");
     console.log(result);
 
-    // Some connector versions resolve connect() with the connected state.
-    // Do not depend exclusively on the event emitter to activate the game.
     if (result?.roomId) lastRoomId = String(result.roomId);
 
     if (result?.isConnected === true && tiktokStatus !== "connected") {
-      console.log("=== TIKTOK CONNECT RESULT CONFIRMED ===");
       tiktokStatus = "connected";
       tiktokError = "";
       gameActive = true;
@@ -917,7 +904,7 @@ async function connectTikTok() {
     gameActive = false;
     const message = String(err?.message || err || "Unknown TikTok connection error");
     tiktokError = message.length > 240 ? message.slice(0, 237) + "..." : message;
-    console.log("TikTok connection attempt failed. Will retry automatically in 5 seconds.");
+    console.log("TikTok connection attempt failed. Will retry automatically.");
     console.log("Reason:", tiktokError);
     broadcastState();
   } finally {
