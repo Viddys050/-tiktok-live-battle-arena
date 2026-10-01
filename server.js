@@ -29,11 +29,19 @@ const defaultConfig = {
     girls: ["girls","girl","meiden","vrouwen"]
   },
   gifts: {
-    "rose": "attack",
-    "finger heart": "shield",
-    "perfume": "rage",
-    "heart me": "rage",
-    "galaxy": "boss"
+    "rose": "heal25",
+    "finger heart": "heal100",
+    "perfume": "shield10",
+    "heart me": "heal250",
+    "galaxy": "teamheal500"
+  },
+  // These are GAME effects only. No cash, prizes, withdrawals, or gambling.
+  giftRules: {
+    "rose": { coins: 1, effect: "heal25", label: "+25 HP" },
+    "finger heart": { coins: 5, effect: "heal100", label: "+100 HP" },
+    "perfume": { coins: 20, effect: "shield10", label: "10s SHIELD" },
+    "heart me": { coins: 20, effect: "heal250", label: "+250 HP" },
+    "galaxy": { coins: 100, effect: "teamheal500", label: "TEAM +500 HP" }
   }
 };
 
@@ -169,6 +177,11 @@ function attack(p, strength=1, source="comment") {
     return;
   }
   const damage = Math.max(4, Math.round((18 + p.power * 0.12) * strength));
+  if (target.shieldUntil && target.shieldUntil > now()) {
+    pushEvent(`🛡️ ${target.name} blocks the attack!`, "shield");
+    broadcast({ type:"action", action:"shieldBlock", player:target.id, name:target.name });
+    return;
+  }
   target.hp -= damage;
   p.combo = Math.min(99, p.combo + 1);
   target.combo = 0;
@@ -310,6 +323,44 @@ function handleLike(data) {
   broadcast({ type:"action", action:"like", player:p.id, team:p.team, count: count * power, likeCount: count, name:p.name, finalBattle });
   pushEvent(`❤️ ${p.name} geeft ${count} like${count===1?"":"s"}!${finalBattle?" 🔥 FINAL BATTLE x3!":""}`, "like");
 }
+function findGiftRule(giftName) {
+  const n = normalize(giftName);
+  const rules = config.giftRules || defaultConfig.giftRules;
+  const exact = Object.entries(rules).find(([name]) => n === normalize(name));
+  if (exact) return exact[1];
+  const partial = Object.entries(rules).find(([name]) => n.includes(normalize(name)));
+  return partial ? partial[1] : null;
+}
+function applyGiftEffect(p, rule) {
+  if (!rule || !p?.team) return null;
+  const teammates = [...players.values()].filter(x => x.team === p.team && x.alive);
+  const effect = rule.effect;
+  if (effect === "heal25" || effect === "heal100" || effect === "heal250") {
+    const amount = effect === "heal25" ? 25 : effect === "heal100" ? 100 : 250;
+    p.hp = Math.min(p.maxHp, p.hp + amount);
+    broadcast({ type:"action", action:"giftEffect", effect, player:p.id, team:p.team, name:p.name, amount, label:rule.label });
+    pushEvent(`✨ ${p.name}: ${rule.label}`, "giftEffect");
+    return { amount, label: rule.label };
+  }
+  if (effect === "shield10") {
+    p.shieldUntil = now() + 10000;
+    broadcast({ type:"action", action:"giftEffect", effect, player:p.id, team:p.team, name:p.name, amount:10, label:rule.label });
+    pushEvent(`🛡️ ${p.name}: ${rule.label}`, "giftEffect");
+    return { amount: 10, label: rule.label };
+  }
+  if (effect === "teamheal500") {
+    let healed = 0;
+    for (const mate of teammates) {
+      const before = mate.hp;
+      mate.hp = Math.min(mate.maxHp, mate.hp + 500);
+      healed += mate.hp - before;
+    }
+    broadcast({ type:"action", action:"giftEffect", effect, player:p.id, team:p.team, name:p.name, amount:healed, label:rule.label });
+    pushEvent(`🌟 ${p.name}: ${rule.label}`, "giftEffect");
+    return { amount: healed, label: rule.label };
+  }
+  return null;
+}
 function handleGift(data) {
   rawTikTokEvent("GIFT", data);
   const name = data.user?.nickname || data.nickname || data.uniqueId || "Viewer";
@@ -334,9 +385,10 @@ function handleGift(data) {
   previousGift.diamonds += diamond * count;
   giftStats.set(giftKey, previousGift);
 
-  // Gifts are a visual LIVE interaction only. They never change gameplay, score, power,
-  // health, energy, team strength, or the winner.
-  pushEvent(`🎁 ${p.name} sent ${giftName} ×${count}`, "gift");
+  // Gifts trigger deterministic GAME effects only: no cash, prizes, betting or random rewards.
+  const rule = findGiftRule(giftName);
+  const effect = (!isStreakProgress && rule) ? applyGiftEffect(p, rule) : null;
+  pushEvent(`🎁 ${p.name} sent ${giftName} ×${count}${rule ? ` → ${rule.label}` : ""}`, "gift");
   if (!isStreakProgress) {
     broadcast({
       type:"action",
@@ -345,7 +397,10 @@ function handleGift(data) {
       team:p.team,
       name:p.name,
       giftName,
-      count
+      count,
+      coins: rule?.coins || 0,
+      effect: rule?.effect || null,
+      effectLabel: effect?.label || rule?.label || "visual reaction"
     });
   }
 }
@@ -406,8 +461,12 @@ async function getTikTokRoomIdWithBrowser(username) {
         /["']?roomId["']?\\s*[:=]\\s*["']?(\\d{10,})["']?/gi,
         /["']?room_id["']?\\s*[:=]\\s*["']?(\\d{10,})["']?/gi,
         /["']?roomID["']?\\s*[:=]\\s*["']?(\\d{10,})["']?/gi,
+        /["']?streamId["']?\\s*[:=]\\s*["']?(\\d{10,})["']?/gi,
+        /["']?stream_id["']?\\s*[:=]\\s*["']?(\\d{10,})["']?/gi,
         /roomId\\D{0,200}(\\d{10,})/gi,
         /room_id\\D{0,200}(\\d{10,})/gi,
+        /streamId\\D{0,200}(\\d{10,})/gi,
+        /stream_id\\D{0,200}(\\d{10,})/gi,
         /webcast_id\\D{0,200}(\\d{10,})/gi,
         /webcastId\\D{0,200}(\\d{10,})/gi
       ];
@@ -422,7 +481,7 @@ async function getTikTokRoomIdWithBrowser(username) {
       }
       if (typeof value !== "object") return;
       for (const [key, child] of Object.entries(value)) {
-        if (/^(roomId|room_id|roomID|webcastId|webcast_id)$/i.test(key)) {
+        if (/^(roomId|room_id|roomID|streamId|stream_id|webcastId|webcast_id)$/i.test(key)) {
           const id = String(child ?? "").match(/\\d{10,}/)?.[0];
           if (id) candidates.add(id);
         }
