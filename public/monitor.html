@@ -103,7 +103,7 @@ details{border:1px solid #1e2d42;border-radius:10px;background:#080f1a}details s
 <button onclick="demo('join')">JOIN</button><button onclick="demo('attack')">ATTACK</button><button onclick="demo('shield')">SHIELD</button><button onclick="demo('rage')">RAGE</button><button onclick="demo('boss')">BOSS</button>
 </div></div>
 <div class="controlBlock"><h4>Testing</h4><div class="controlButtons">
-<button onclick="demo('like')">❤️ LIKE</button><button onclick="demo('gift')">🎁 GIFT</button><button onclick="post('/api/control',{action:'reset'})">♻️ Reset</button>
+<button onclick="demo('like','red')">❤️ BOYS LIKE</button><button onclick="demo('like','blue')">❤️ GIRLS LIKE</button><button onclick="demo('gift','blue')">🎁 GIFT VISUAL</button><button onclick="post('/api/control',{action:'reset'})">♻️ Reset</button>
 </div></div>
 <div class="controlBlock"><h4>Music</h4><div class="controlButtons"><button id="musicControl" onclick="toggleBackendMusic()">🔇 Battle Music: OFF</button></div></div>
 <div class="controlBlock"><h4>Connection</h4><div class="controlButtons"><button class="primary" onclick="post('/api/control',{action:'reconnect'})">🔌 Reconnect TikTok</button></div></div>
@@ -258,7 +258,7 @@ async function save(){
  const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();$('saved').textContent=j.ok?'✓ saved':'';setTimeout(()=>$('saved').textContent='',1800)
 }
 async function post(u,b){try{await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})}catch(e){console.error(e)}}
-function demo(a){post('/api/control',{action:'demo',gameAction:a})}
+function demo(a,team){post('/api/control',{action:'demo',gameAction:a,team,name:'Test Viewer'})}
 function esc(s){return String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 connect();
 </script>
