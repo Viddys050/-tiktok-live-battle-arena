@@ -64,7 +64,7 @@
     <div class="towerSide towerBoys">
       <div class="towerTeamTitle">🔵 BOYS <span id="boysTowerScore">0</span></div>
       <div class="buildZone" id="boysBuild"></div>
-      <div class="towerCaption">BOYS BOUWT</div>
+      <div class="towerCaption">BOYS BUILD</div>
     </div>
     <div class="towerCenter">
       <div class="towerCrown">🏆</div>
@@ -78,19 +78,19 @@
     <div class="towerSide towerGirls">
       <div class="towerTeamTitle">GIRLS 🩷 <span id="girlsTowerScore">0</span></div>
       <div class="buildZone" id="girlsBuild"></div>
-      <div class="towerCaption">GIRLS BOUWT</div>
+      <div class="towerCaption">GIRLS BUILD</div>
     </div>
   </div>
-  <div class="towerMessage" id="towerMessage">LIKE = BOUWBLOK • GIFTS = SPECIALE ACTIE</div>
+  <div class="towerMessage" id="towerMessage">LIKE = BUILD BLOCK • GIFTS = SPECIAL ACTION</div>
   <div class="towerTokens" id="boysTokens"></div>
   <div class="towerTokens" id="girlsTokens"></div>
 </div>
 <div class="supporters"><div class="supportTitle">🏆 TOP TEAM PLAYERS</div><div class="supportGrid"><div class="supportCol"><div class="supportHead boysT">🔵 BOYS • LIKES</div><div id="boysLikes"></div></div><div class="supportCol"><div class="supportHead girlsT">🩷 GIRLS • LIKES</div><div id="girlsLikes"></div></div></div></div><div id="musicRemote" style="position:absolute;z-index:40;right:10px;top:10px;background:#000b;border:1px solid #fff3;border-radius:10px;padding:6px 9px;font-size:10px;font-weight:900;backdrop-filter:blur(8px)">🔇 MUSIC OFF</div>
 <div class="instructions">
-<div class="it">🔥 CHOOSE YOUR TEAM IN THE LIVE CHAT 🔥</div>
+<div class="it">🔥 CHOOSE YOUR TEAM IN LIVE CHAT 🔥</div>
 <div class="ig">
-<div class="boysT">🔵 <b>BOYS</b> = join the Boys</div>
-<div class="girlsT">🩷 <b>GIRLS</b> = join the Girls</div>
+<div class="boysT">🔵 <b>BOYS</b> = join Boys</div>
+<div class="girlsT">🩷 <b>GIRLS</b> = join Girls</div>
 <div>❤️ <b>LIKE</b> = team power</div>
 <div>💬 <b>CHAT</b> = join & interact</div>
 </div>
@@ -131,43 +131,61 @@ function setStatus(s){
 function render(s){state=s;window.remoteMusicOn=!!s.musicOn;const err=s.tiktokError?String(s.tiktokError):'';$('loadingText').textContent=s.tiktokStatus==='connecting'?'Connecting to @'+(s.config?.tiktokUsername||'LorenzoLavido')+'…':s.tiktokStatus==='error'?'TikTok connection error: '+err:s.tiktokStatus==='offline'?'Waiting for @'+(s.config?.tiktokUsername||'LorenzoLavido')+' to go LIVE…':'TikTok LIVE connected.';if(s.musicOn&&audioCtx)startMusic();if(!s.musicOn&&musicOn)stopMusic();setStatus(s.tiktokStatus);const final=(s.remaining||0)<=10;$('timer').classList.toggle('final',final);if(final&&!window.finalShown){window.finalShown=true;fx('🔥 FINAL BATTLE!')}if(!final)window.finalShown=false;let b=0,g=0;s.players.forEach(p=>{if(p.team==='red')b+=p.score;else if(p.team==='blue')g+=p.score});$('boys').textContent=b.toLocaleString();$('girls').textContent=g.toLocaleString();const total=Math.max(1,b+g);const redPct=(b/total)*100;const bluePct=(g/total)*100;const left=Math.max(0,s.remaining||0);$('timer').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0');renderTanks();renderSupporters(s.players)}
 function renderSupporters(players){const groups={boysLikes:[],girlsLikes:[]};for(const p of players){if(p.team!=='red'&&p.team!=='blue')continue;const side=p.team==='red'?'boys':'girls';groups[side+'Likes'].push(p)}for(const k of Object.keys(groups)){groups[k].sort((a,b)=>(b.likesGiven||0)-(a.likesGiven||0)||b.score-a.score);const el=$(k);el.innerHTML=groups[k].slice(0,3).map((p,i)=>'<div class="supportLine"><b>#'+(i+1)+' '+safeName(p.name)+'</b> '+(p.likesGiven||0)+'</div>').join('')||'<div class="supportLine">—</div>'}}
 function safeName(v){return String(v||'').replace(/[&<>"']/g,'')}
-function resetTanks(){for(const team of ['red','blue']){tankState[team]={likes:0,gifts:0,tokens:[]};const id=team==='red'?'boysTokens':'girlsTokens';$(id).innerHTML='';}renderTanks()}
 const towerVisual={boysBlocks:-1,girlsBlocks:-1,centerBlocks:-1,centerRed:-1,leader:''};
+function resetTanks(){
+  for(const team of ['red','blue']){
+    tankState[team]={likes:0,gifts:0,tokens:[]};
+    const id=team==='red'?'boysTokens':'girlsTokens';
+    $(id).innerHTML='';
+  }
+  Object.assign(towerVisual,{boysBlocks:-1,girlsBlocks:-1,centerBlocks:-1,centerRed:-1,leader:''});
+  renderTanks();
+}
+function updateBuildZone(id,count){
+  const zone=$(id);if(!zone)return;
+  while(zone.children.length<count){
+    const e=document.createElement('div');e.className='buildBlock';zone.appendChild(e);
+  }
+  while(zone.children.length>count)zone.lastElementChild.remove();
+}
+function ensureCenterBlocks(){
+  const body=$('towerBlocks');if(!body)return null;
+  while(body.children.length<22){
+    const e=document.createElement('div');e.className='centerBlock';e.style.opacity='0';body.appendChild(e);
+  }
+  return body;
+}
 function renderTanks(){
   const scores={red:0,blue:0};
   if(state?.players)state.players.forEach(p=>{if(p.team==='red'||p.team==='blue')scores[p.team]+=Number(p.score)||0});
   const boysBlocks=Math.min(18,Math.max(0,Math.floor((scores.red||0)/100)));
   const girlsBlocks=Math.min(18,Math.max(0,Math.floor((scores.blue||0)/100)));
-  const total=Math.max(1,(scores.red||0)+(scores.blue||0));
-  const centerBlocks=Math.min(22,Math.max(2,Math.floor(total/100)||0));
-  const centerRed=Math.round(centerBlocks*(scores.red||0)/total);
-  const leader=(scores.red||0)===(scores.blue||0)?'VS':((scores.red||0)>(scores.blue||0)?'BOYS':'GIRLS');
+  const total=(scores.red||0)+(scores.blue||0);
+  const centerBlocks=total>0?Math.min(22,Math.max(1,Math.floor(total/100)||1)):0;
+  const centerRed=total>0?Math.round(centerBlocks*(scores.red||0)/total):0;
+  const leader=total===0?'VS':((scores.red||0)===(scores.blue||0)?'VS':((scores.red||0)>(scores.blue||0)?'BOYS':'GIRLS'));
 
   $('boysTowerScore').textContent=(scores.red||0).toLocaleString();
   $('girlsTowerScore').textContent=(scores.blue||0).toLocaleString();
 
-  if(towerVisual.boysBlocks!==boysBlocks){
-    const zone=$('boysBuild');zone.innerHTML='';
-    for(let i=0;i<boysBlocks;i++){const e=document.createElement('div');e.className='buildBlock';zone.appendChild(e)}
-    towerVisual.boysBlocks=boysBlocks;
-  }
-  if(towerVisual.girlsBlocks!==girlsBlocks){
-    const zone=$('girlsBuild');zone.innerHTML='';
-    for(let i=0;i<girlsBlocks;i++){const e=document.createElement('div');e.className='buildBlock';zone.appendChild(e)}
-    towerVisual.girlsBlocks=girlsBlocks;
-  }
+  if(towerVisual.boysBlocks!==boysBlocks){updateBuildZone('boysBuild',boysBlocks);towerVisual.boysBlocks=boysBlocks}
+  if(towerVisual.girlsBlocks!==girlsBlocks){updateBuildZone('girlsBuild',girlsBlocks);towerVisual.girlsBlocks=girlsBlocks}
   renderCentralTower(centerBlocks,centerRed,leader);
 }
 function renderCentralTower(centerBlocks,centerRed,leader){
-  const body=$('towerBlocks');if(!body)return;
+  const body=ensureCenterBlocks();if(!body)return;
   if(towerVisual.centerBlocks!==centerBlocks||towerVisual.centerRed!==centerRed){
-    body.innerHTML='';
-    for(let i=0;i<centerBlocks;i++){const e=document.createElement('div');e.className='centerBlock '+(i<centerRed?'boys':'girls');body.appendChild(e)}
+    for(let i=0;i<22;i++){
+      const e=body.children[i];
+      const visible=i<centerBlocks;
+      e.className='centerBlock '+(i<centerRed?'boys':'girls');
+      e.style.opacity=visible?'1':'0';
+    }
     towerVisual.centerBlocks=centerBlocks;towerVisual.centerRed=centerRed;
   }
   if(towerVisual.leader!==leader){
     $('towerClash').textContent=leader;
-    $('towerMessage').textContent=leader==='VS'?'⚔️ GELIJKE STRIJD • BOUW DE TOREN':'⚔️ '+leader+' LIGT VOOROP • BOUW VERDER';
+    $('towerMessage').textContent=leader==='VS'?'⚔️ TIED BATTLE • BUILD THE TOWER':'⚔️ '+leader+' LEADS • KEEP BUILDING';
     towerVisual.leader=leader;
   }
 }
