@@ -637,7 +637,7 @@ async function getTikTokRoomId(username) {
   throw new Error(`TikTok LIVE room lookup failed. Direct page, TikRec, API and browser lookup all failed.${signError ? ` TikRec: ${signError.message}` : ""}`);
 }
 
-async async function connectTikTok() {
+async function connectTikTok() {
   if (reconnectInProgress) return;
   reconnectInProgress = true;
   console.log("=== TIKTOK CONNECTION START ===");
