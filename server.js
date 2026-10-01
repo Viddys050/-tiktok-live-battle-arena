@@ -406,17 +406,34 @@ async function getTikTokRoomIdWithBrowser(username) {
       if (!value) return;
       const text = String(value);
       const patterns = [
-        /"roomId"\s*[:=]\s*"?(\d{10,})"?/gi,
-        /"room_id"\s*[:=]\s*"?(\d{10,})"?/gi,
-        /roomId\D{0,80}(\d{10,})/gi,
-        /room_id\D{0,80}(\d{10,})/gi,
-        /roomID\D{0,80}(\d{10,})/gi,
+        /["']?roomId["']?\s*[:=]\s*["']?(\d{10,})["']?/gi,
+        /["']?room_id["']?\s*[:=]\s*["']?(\d{10,})["']?/gi,
+        /["']?roomID["']?\s*[:=]\s*["']?(\d{10,})["']?/gi,
+        /roomId\D{0,120}(\d{10,})/gi,
+        /room_id\D{0,120}(\d{10,})/gi,
+        /webcast_id\D{0,120}(\d{10,})/gi,
+        /webcastId\D{0,120}(\d{10,})/gi,
         /room_id=(\d{10,})/gi,
-        /roomId=(\d{10,})/gi,
-        /webcast_id[=:](\d{10,})/gi
+        /roomId=(\d{10,})/gi
       ];
       for (const re of patterns) {
         for (const m of text.matchAll(re)) candidates.add(m[1]);
+      }
+    };
+
+    const inspectJson = (value, depth = 0) => {
+      if (!value || depth > 12) return;
+      if (Array.isArray(value)) {
+        for (const item of value) inspectJson(item, depth + 1);
+        return;
+      }
+      if (typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value)) {
+        if (/^(roomId|room_id|roomID|webcastId|webcast_id)$/i.test(key)) {
+          const id = String(child ?? "").match(/\d{10,}/)?.[0];
+          if (id) candidates.add(id);
+        }
+        inspectJson(child, depth + 1);
       }
     };
 
@@ -454,7 +471,40 @@ async function getTikTokRoomIdWithBrowser(username) {
       }
       return out;
     });
-    for (const item of scriptData) inspect(item);
+    for (const item of scriptData) {
+      inspect(item);
+      try { inspectJson(JSON.parse(item)); } catch {}
+    }
+
+    // TikTok can put the current LIVE roomId on the broadcaster profile
+    // rather than the /live page. Try the profile as a second browser source.
+    if (!candidates.size) {
+      const profilePage = await browser.newPage({
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+        viewport: { width: 960, height: 540 },
+        deviceScaleFactor: 1
+      });
+      try {
+        profilePage.on("response", onResponse);
+        await profilePage.goto(`https://www.tiktok.com/@${encodeURIComponent(username)}`, {
+          waitUntil: "domcontentloaded",
+          timeout: 30000
+        });
+        await profilePage.waitForTimeout(5000);
+        inspect(profilePage.url());
+        const profileScripts = await profilePage.evaluate(() => {
+          const ids = ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"];
+          return ids.map(id => document.getElementById(id)?.textContent || "").filter(Boolean);
+        });
+        for (const item of profileScripts) {
+          inspect(item);
+          try { inspectJson(JSON.parse(item)); } catch {}
+        }
+      } finally {
+        profilePage.off("response", onResponse);
+        await profilePage.close().catch(() => {});
+      }
+    }
 
     page.off("response", onResponse);
     await page.close().catch(() => {});
