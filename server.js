@@ -644,8 +644,10 @@ async function connectTikTok() {
     tiktok = new TikTokLiveConnection(username, {
       processInitialData: false,
       logFetchFallbackErrors: true,
-      webClientOptions: { timeout: 10000 },
-      wsClientOptions: { timeout: 10000 }
+      // Keep connection attempts short. The connector's WebSocket handshake can
+      // otherwise wait around 20 seconds before surfacing a failure.
+      webClientOptions: { timeout: { request: 7000 } },
+      wsClientOptions: { handshakeTimeout: 7000 }
     });
 
     tiktok.on(WebcastEvent.CHAT, handleChat);
@@ -720,7 +722,11 @@ async function connectTikTok() {
     });
 
     console.log("Calling tiktok.connect()...");
-    const result = await tiktok.connect();
+    const connectPromise = tiktok.connect();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("TikTok connection timed out after 9000ms")), 9000)
+    );
+    const result = await Promise.race([connectPromise, timeoutPromise]);
 
     console.log("=== TIKTOK CONNECT() RESOLVED ===");
     console.log(result);
@@ -749,11 +755,21 @@ async function connectTikTok() {
     console.error("=== TIKTOK CONNECT FAILED ===");
     console.error(err);
 
-    tiktokStatus = "offline";
+    if (tiktok) {
+      try {
+        await Promise.race([
+          tiktok.disconnect(),
+          new Promise(resolve => setTimeout(resolve, 1000))
+        ]);
+      } catch {}
+      tiktok = null;
+    }
+
+    tiktokStatus = "error";
     gameActive = false;
     const message = String(err?.message || err || "Unknown TikTok connection error");
     tiktokError = message.length > 240 ? message.slice(0, 237) + "..." : message;
-    console.log("TikTok connection attempt failed. Will retry automatically.");
+    console.log("TikTok connection attempt failed. Will retry automatically in 3 seconds.");
     console.log("Reason:", tiktokError);
     broadcastState();
   } finally {
