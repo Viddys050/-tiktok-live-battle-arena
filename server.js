@@ -71,6 +71,7 @@ let tiktok = null;
 let lastRoomId = "";
 let tiktokStatus = "offline";
 let tiktokError = "";
+let tiktokConnectStage = "Starting";
 let reconnectTimer = null;
 let reconnectKickTimer = null;
 let livePreviewBrowser = null;
@@ -422,7 +423,7 @@ function serialize() {
     type: "state",
     round, roundSeconds: Number(config.roundSeconds || 120),
     remaining: Math.max(0, Number(config.roundSeconds || 120) - Math.floor((now()-roundStarted)/1000)),
-    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError, gameActive,
+    totalLikes, totalGifts, musicOn, tiktokStatus, tiktokError, tiktokConnectStage, gameActive,
     players: list, feed: events.slice(0, 20),
     giftStats: [...giftStats.values()].sort((a,b) => b.count - a.count),
     metrics: { uptime: Math.floor((now() - roundStarted) / 1000), connections: wss.clients.size },
@@ -728,11 +729,11 @@ async function connectTikTok() {
     // Resolve the LIVE room once, then pass the explicit roomId to the connector.
     // This avoids making tiktok-live-connector repeat its own room lookup.
     // It also lets the control room show the exact room we are trying to enter.
-    const roomId = await getTikTokRoomId(username);
+    tiktokConnectStage = "LIVE room found — opening TikTok connection…";\n    broadcastState();\n    const roomId = await getTikTokRoomId(username);\n    tiktokConnectStage = "LIVE room found — opening TikTok connection…";
     if (!roomId) throw new Error("TikTok is not LIVE or no room ID could be resolved.");
     lastRoomId = String(roomId);
     broadcastState();
-    console.log("Calling tiktok.connect(roomId):", roomId);
+    console.log("Calling tiktok.connect(roomId):", roomId);\n    broadcastState();
     const connectPromise = tiktok.connect(roomId);
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("TikTok WebSocket connection timed out after 6000ms")), 6000)
