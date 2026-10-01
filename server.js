@@ -1002,7 +1002,8 @@ async function getLivePreviewBrowser() {
     await livePreviewInitPromise.catch(() => {});
     if (livePreviewBrowser?.isConnected()) return livePreviewBrowser;
   }
-  if (!livePreviewBrowser) {
+  // If Chromium disappeared, launch exactly one replacement browser.
+  if (!livePreviewBrowser || !livePreviewBrowser.isConnected()) {
     livePreviewBrowser = await launchLivePreviewBrowser();
   }
   return livePreviewBrowser;
@@ -1023,6 +1024,8 @@ app.get("/api/live-preview.jpg", async (_,res) => {
     res.type("image/jpeg").send(jpg);
   } catch (err) {
     console.error("LIVE preview error:", err?.message || err);
+    // Never close the shared Chromium browser from the preview endpoint.
+    // Room discovery may be using another page in the same browser.
     try { await livePreviewPage?.close(); } catch {}
     livePreviewPage = null;
     res.status(503).json({ok:false,error:String(err?.message || err)});
