@@ -84,7 +84,15 @@
 <div>❤️ <b>LIKE</b> = team power</div>
 <div>💬 <b>CHAT</b> = join & interact</div>
 </div>
-<div class="giftguide"><div class="guideTitle">⚡ LIVE BATTLE</div><div class="guideText">Choose your team in chat and support your team with likes.</div><div class="giftrow"><span>🔵 BOYS</span><b>TEAM A</b></div><div class="giftrow"><span>🩷 GIRLS</span><b>TEAM B</b></div></div>
+<div class="giftguide">
+<div class="guideTitle">🎁 GIFTS = GAME ACTIONS</div>
+<div class="guideText">Gifts activate fixed effects inside the game. No cash prizes, no betting, no random rewards.</div>
+<div class="giftrow"><span>🌹 Rose</span><b>🪙 1 → +25 HP</b></div>
+<div class="giftrow"><span>💗 Finger Heart</span><b>🪙 5 → +100 HP</b></div>
+<div class="giftrow"><span>✨ Perfume</span><b>🪙 20 → 10s SHIELD</b></div>
+<div class="giftrow"><span>💗 Heart Me</span><b>🪙 20 → +250 HP</b></div>
+<div class="giftrow galaxy"><span>🌌 Galaxy</span><b>🪙 100 → TEAM +500 HP</b></div>
+</div>
 </div>
 </div>
 <script>
@@ -121,7 +129,11 @@ function addLikeTokens(team,name,count){if(team!=='red'&&team!=='blue')return;co
 function upsert(p){}
 function feed(i){if(!i||seen.has(i.id))return;seen.add(i.id);const d=document.createElement('div');d.className='event';d.textContent=i.text;$('feed').appendChild(d);while($('feed').children.length>5)$('feed').firstChild.remove();setTimeout(()=>d.remove(),6000)}
 function fx(t){const e=$('fx');e.textContent=t;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
-function giftIcon(giftName){const n=String(giftName||'Gift').toLowerCase();if(n.includes('rose'))return'🌹';if(n.includes('heart'))return'💗';if(n.includes('perfume'))return'✨';if(n.includes('galaxy'))return'🌌';return'🎁'}function giftVisual(giftName,team,name,count){const icon=giftIcon(giftName);const side=team==='red'?'🔵':'🩷';fx(side+' '+icon+' '+safeName(name||'Viewer')+' • '+giftName+(count>1?' ×'+count:''));addGiftToken(team,name,giftName,count)}
-function action(m){if(m.action==='music'){window.remoteMusicOn=!!m.enabled;if(window.remoteMusicOn)startMusic();else stopMusic();return}if(m.action==='like'){addLikeTokens(m.team,m.name,m.likeCount||m.count);fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE!')}if(m.action==='team')fx(m.team==='red'?'🔵 BOYS!':'🩷 GIRLS!');if(m.action==='giftReceived')giftVisual(m.giftName,m.team,m.name,m.count)}
+function giftIcon(giftName){const n=String(giftName||'Gift').toLowerCase();if(n.includes('rose'))return'🌹';if(n.includes('heart'))return'💗';if(n.includes('perfume'))return'✨';if(n.includes('galaxy'))return'🌌';return'🎁'}function giftVisual(giftName,team,name,count,coins,effectLabel){const icon=giftIcon(giftName);const side=team==='red'?'🔵':'🩷';const extra=effectLabel?' → '+effectLabel:'';fx(side+' '+icon+' '+safeName(name||'Viewer')+' • '+giftName+(coins?' 🪙'+coins:'')+extra);addGiftToken(team,name,giftName,count)}
+function action(m){if(m.action==='music'){window.remoteMusicOn=!!m.enabled;if(window.remoteMusicOn)startMusic();else stopMusic();return}if(m.action==='like'){addLikeTokens(m.team,m.name,m.likeCount||m.count);fx(m.finalBattle?'🔥 LIKE x3!':'❤️ LIKE!')}if(m.action==='team')fx(m.team==='red'?'🔵 BOYS!':'🩷 GIRLS!');if(m.action==='giftReceived')giftVisual(m.giftName,m.team,m.name,m.count,m.coins,m.effectLabel);
+if(m.action==='giftEffect'){
+  const side=m.team==='red'?'🔵':'🩷';
+  fx(side+' '+(m.label||m.effect||'GIFT EFFECT'));
+}}
 connect();
 </script></div></body></html>
