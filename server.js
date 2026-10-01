@@ -767,7 +767,7 @@ function scheduleTikTokReconnect() {
   reconnectTimer = setInterval(async () => {
     if (tiktokStatus === "connected" || reconnectInProgress) return;
     await connectTikTok();
-  }, 5000);
+  }, 3000);
 }
 function updateArenaPhysics() {
   const active = [...players.values()].filter(p => p.alive);
