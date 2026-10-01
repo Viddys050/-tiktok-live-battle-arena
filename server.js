@@ -58,6 +58,7 @@ let lastRoomId = "";
 let tiktokStatus = "offline";
 let tiktokError = "";
 let reconnectTimer = null;
+let reconnectKickTimer = null;
 let reconnectInProgress = false;
 let round = 1;
 let roundStarted = Date.now();
@@ -694,9 +695,9 @@ async function connectTikTok() {
 
       // The disconnect event can fire while connectTikTok() is still unwinding.
       // Do not rely on reconnectInProgress here; always schedule a fresh attempt.
-      clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
+      clearTimeout(reconnectKickTimer);
+      reconnectKickTimer = setTimeout(() => {
+        reconnectKickTimer = null;
         if (tiktokStatus !== "connected" && !reconnectInProgress) connectTikTok();
       }, 2000);
     });
