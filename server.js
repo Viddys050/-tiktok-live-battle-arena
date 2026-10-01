@@ -39,7 +39,13 @@ const defaultConfig = {
 
 function loadConfig() {
   try {
-    return { ...defaultConfig, ...JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8")) };
+    const saved = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+    return {
+      ...defaultConfig,
+      ...saved,
+      commands: { ...defaultConfig.commands, ...(saved.commands || {}) },
+      gifts: { ...defaultConfig.gifts, ...(saved.gifts || {}) }
+    };
   } catch {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(defaultConfig, null, 2));
     return structuredClone(defaultConfig);
@@ -900,8 +906,12 @@ app.post("/api/config", async (req,res) => {
     config.commentCooldownMs = Math.max(0, Number(incoming.commentCooldownMs));
   if (Number.isFinite(Number(incoming.likeCooldownMs)))
     config.likeCooldownMs = Math.max(0, Number(incoming.likeCooldownMs));
-  if (incoming.commands && typeof incoming.commands === "object") config.commands = incoming.commands;
-  if (incoming.gifts && typeof incoming.gifts === "object") config.gifts = incoming.gifts;
+  if (incoming.commands && typeof incoming.commands === "object") {
+    config.commands = { ...config.commands, ...incoming.commands };
+  }
+  if (incoming.gifts && typeof incoming.gifts === "object") {
+    config.gifts = { ...config.gifts, ...incoming.gifts };
+  }
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
   await connectTikTok();
   res.json({ok:true, config, status:tiktokStatus});
@@ -915,9 +925,17 @@ app.post("/api/control", async (req,res) => {
   else if(action==="music"){musicOn = typeof req.body?.enabled === "boolean" ? req.body.enabled : !musicOn;broadcast({type:"action",action:"music",enabled:musicOn});}
   else if(action==="demo"){
     const names=["Luna","Rico","Mila","Daan","Noah","Jay","Sanne","Max","Kai","Nova"];
-    const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
     const a=req.body?.gameAction||"attack";
-    if(a==="boss"){p.energy=100;boss(p);} else if(a==="like") handleLike({uniqueId:p.uniqueId,nickname:p.name,likeCount:10}); else if(a==="gift") handleGift({uniqueId:p.uniqueId,nickname:p.name,giftName:"Rose",repeatCount:5,diamondCount:1}); else command(p,a);
+    // The control-room visual tests for the BOYS/GIRLS screen are isolated from
+    // the legacy combat actions. They only emit the exact frontend visual event.
+    if(a==="like") {
+      broadcast({type:"action",action:"like",player:"test-like",team:req.body?.team==="blue"?"blue":"red",count:1,likeCount:1,name:req.body?.name||"Test Viewer",finalBattle:false});
+    } else if(a==="gift") {
+      broadcast({type:"action",action:"giftReceived",player:"test-gift",team:req.body?.team==="red"?"red":"blue",name:req.body?.name||"Test Viewer",giftName:req.body?.giftName||"Rose",count:1});
+    } else {
+      const p=getOrCreate(req.body?.name||names[Math.floor(Math.random()*names.length)],"monitor-demo-"+Date.now());
+      if(a==="boss"){p.energy=100;boss(p);} else command(p,a);
+    }
   }
   broadcastState(); res.json({ok:true,status:tiktokStatus});
 });
