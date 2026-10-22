@@ -260,7 +260,6 @@ async function resolveRoomId(username) {
         walk(JSON.parse(item));
       } catch {}
     }
-    await page.close().catch(() => {});
     if (candidates.size) {
       const id = [...candidates][0];
       console.log("[Room lookup] Chromium found room ID:", id);
