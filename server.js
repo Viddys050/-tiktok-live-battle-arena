@@ -19,7 +19,14 @@ const state = {
   roomId: "",
   likesTotal: 0,
   viewers: 0,
+  peakViewers: 0,
   giftEvents: 0,
+  diamondsTotal: 0,
+  sharesTotal: 0,
+  followsTotal: 0,
+  joinsTotal: 0,
+  sessionStartedAt: "",
+  giftBreakdown: {},
   gifts: [],
   chat: [],
   events: [],
@@ -65,6 +72,11 @@ function handleGift(data) {
   const item = { time: new Date().toISOString(), username, name: giftName, count, diamonds: diamondsEach * count };
   addLatest(state.gifts, item, 150);
   state.giftEvents += count;
+  state.diamondsTotal += item.diamonds;
+  const giftKey = giftName.toLowerCase();
+  if (!state.giftBreakdown[giftKey]) state.giftBreakdown[giftKey] = { name: giftName, count: 0, diamonds: 0 };
+  state.giftBreakdown[giftKey].count += count;
+  state.giftBreakdown[giftKey].diamonds += item.diamonds;
   const id = String(user.userId ?? user.id ?? user.uniqueId ?? username);
   if (!state.supporters[id]) state.supporters[id] = { username, gifts: 0, diamonds: 0 };
   state.supporters[id].username = username;
@@ -79,6 +91,30 @@ function handleLike(data) {
   const count = Math.max(1, Number(data?.likeCount || 1));
   state.likesTotal += count;
   logEvent("like", "+" + count.toLocaleString("en-US") + " likes", { count, total: state.likesTotal });
+  emitState();
+}
+
+function handleFollow(data) {
+  const user = data?.user || data?.fromUser || {};
+  const username = safe(user.displayId || user.nickname || user.uniqueId || data?.nickname || "viewer", 60);
+  state.followsTotal += 1;
+  logEvent("follow", "@" + username + " followed the LIVE", { username });
+  emitState();
+}
+
+function handleShare(data) {
+  const user = data?.user || data?.fromUser || {};
+  const username = safe(user.displayId || user.nickname || user.uniqueId || data?.nickname || "viewer", 60);
+  state.sharesTotal += 1;
+  logEvent("share", "@" + username + " shared the LIVE", { username });
+  emitState();
+}
+
+function handleMember(data) {
+  const user = data?.user || data?.fromUser || {};
+  const username = safe(user.displayId || user.nickname || user.uniqueId || data?.nickname || "viewer", 60);
+  state.joinsTotal += 1;
+  logEvent("join", "@" + username + " joined the LIVE", { username });
   emitState();
 }
 
@@ -326,7 +362,14 @@ async function connect(username) {
   if (!state.username) throw new Error("Enter your TikTok username without @.");
   state.likesTotal = 0;
   state.viewers = 0;
+  state.peakViewers = 0;
   state.giftEvents = 0;
+  state.diamondsTotal = 0;
+  state.sharesTotal = 0;
+  state.followsTotal = 0;
+  state.joinsTotal = 0;
+  state.sessionStartedAt = new Date().toISOString();
+  state.giftBreakdown = {};
   state.gifts = [];
   state.chat = [];
   state.events = [];
@@ -340,9 +383,15 @@ async function connect(username) {
   connection.on(WebcastEvent.CHAT, handleChat);
   connection.on(WebcastEvent.GIFT, handleGift);
   connection.on(WebcastEvent.LIKE, handleLike);
+  connection.on("follow", handleFollow);
+  connection.on("share", handleShare);
+  connection.on("member", handleMember);
   connection.on(WebcastEvent.ROOM_USER, data => {
-    const viewers = Number(data?.viewerCount ?? data?.total ?? data?.userCount);
-    if (Number.isFinite(viewers) && viewers >= 0) state.viewers = viewers;
+    const viewers = Number(data?.viewerCount ?? data?.totalUserCount ?? data?.total ?? data?.userCount);
+    if (Number.isFinite(viewers) && viewers >= 0) {
+      state.viewers = viewers;
+      state.peakViewers = Math.max(state.peakViewers, viewers);
+    }
     emitState();
   });
   connection.on(ControlEvent.ERROR, data => {
