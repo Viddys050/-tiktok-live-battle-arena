@@ -129,7 +129,19 @@ async function connect(username) {
     emitState();
   } catch (error) {
     state.connected = false;
-    state.error = safe(error?.message || error, 500);
+    let requestErrors = "";
+    try {
+      const details = connection?.config?.requestErrs;
+      if (details) requestErrors = JSON.stringify(details);
+    } catch {}
+    const message = String(error?.message || error);
+    console.error("[TikTok LIVE connection failed]", {
+      username: state.username,
+      message,
+      requestErrs: requestErrors || "(not exposed by connector)",
+      stack: error?.stack || ""
+    });
+    state.error = safe(requestErrors ? message + " | Request errors: " + requestErrors : message, 1000);
     logEvent("system", "Connection failed: " + state.error);
     emitState();
     throw error;
