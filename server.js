@@ -85,10 +85,10 @@ function handleLike(data) {
 
 async function resolveRoomId(username) {
   const patterns = [
-    /"roomId"\\s*:\\s*"?([0-9]{10,})"?/i,
-    /"room_id"\\s*:\\s*"?([0-9]{10,})"?/i,
-    /webcast_id\\D{0,100}([0-9]{10,})/i,
-    /room_id=(\\d{10,})/i
+    /"roomId"\s*:\s*"?([0-9]{10,})"?/i,
+    /"room_id"\s*:\s*"?([0-9]{10,})"?/i,
+    /webcast_id\D{0,100}([0-9]{10,})/i,
+    /room_id=(\d{10,})/i
   ];
   const findId = value => {
     const body = String(value || "");
@@ -143,7 +143,7 @@ async function resolveRoomId(username) {
     };
     page.on("response", async response => {
       try {
-        if (!/tiktok\\.com/i.test(response.url())) return;
+        if (!/tiktok\.com/i.test(response.url())) return;
         inspect(response.url());
         if (/live|room|webcast|api-live/i.test(response.url())) inspect(await response.text());
       } catch {}
