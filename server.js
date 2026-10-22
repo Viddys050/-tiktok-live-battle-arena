@@ -117,6 +117,92 @@ async function resolveRoomId(username) {
     console.log("[Room lookup] direct TikTok request failed:", error?.message || error);
   }
 
+  // Second path: ask TikRec for a signed TikTok room endpoint.
+  // TikTok sometimes serves the LIVE page without embedding the room ID.
+  const requestHeaders = {
+    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 Version/18.6 Mobile/15E148 Safari/604.1",
+    "Accept": "application/json,text/plain,*/*",
+    "Referer": "https://www.tiktok.com/",
+    "Origin": "https://www.tiktok.com",
+    "Accept-Language": "en-US,en;q=0.9"
+  };
+  try {
+    console.log("[Room lookup] Trying TikRec signed room lookup...");
+    const signResponse = await fetch(`https://tikrec.com/tiktok/room/api/sign?unique_id=${encodeURIComponent(username)}`, {
+      headers: requestHeaders,
+      signal: AbortSignal.timeout(10000)
+    });
+    const signText = await signResponse.text();
+    console.log("[Room lookup] TikRec signer:", signResponse.status, "bytes:", signText.length);
+    if (!signResponse.ok) throw new Error("signer HTTP " + signResponse.status);
+    const signed = JSON.parse(signText);
+    const signedUrl = signed?.signed_url || (signed?.signed_path ? "https://www.tiktok.com" + signed.signed_path : "");
+    if (!signedUrl) throw new Error("signer returned no signed URL");
+    const roomResponse = await fetch(signedUrl, {
+      headers: requestHeaders,
+      signal: AbortSignal.timeout(10000)
+    });
+    const roomText = await roomResponse.text();
+    console.log("[Room lookup] Signed room API:", roomResponse.status, "bytes:", roomText.length);
+    const data = JSON.parse(roomText);
+    const id = data?.data?.room_info?.id ||
+      data?.data?.roomInfo?.roomId ||
+      data?.data?.room_info?.roomId ||
+      data?.data?.user?.roomId ||
+      data?.data?.liveRoom?.roomId ||
+      data?.room_id ||
+      findId(roomText);
+    if (id && String(id).match(/^\d{10,}$/)) {
+      console.log("[Room lookup] TikRec found room ID:", String(id));
+      return String(id);
+    }
+    console.log("[Room lookup] TikRec response had no usable room ID; status:", data?.statusCode ?? data?.status_code ?? "unknown");
+  } catch (error) {
+    console.log("[Room lookup] TikRec lookup failed:", error?.message || error);
+  }
+
+  // Third path: TikTok's room endpoint. Use multiple browser/region parameters
+  // because the endpoint can behave differently for mobile and desktop clients.
+  try {
+    console.log("[Room lookup] Trying TikTok room API...");
+    const params = new URLSearchParams({
+      aid: "1988",
+      app_language: "en",
+      app_name: "tiktok_web",
+      browser_language: "en-US",
+      browser_name: "Safari",
+      browser_online: "true",
+      browser_platform: "iPhone",
+      browser_version: "18.6",
+      device_platform: "web",
+      from_page: "user",
+      is_page_visible: "true",
+      channel: "tiktok_web",
+      region: "US",
+      webcast_language: "en",
+      sourceType: "54",
+      uniqueId: username
+    });
+    const apiResponse = await fetch("https://www.tiktok.com/api-live/user/room/?" + params.toString(), {
+      headers: requestHeaders,
+      signal: AbortSignal.timeout(10000)
+    });
+    const apiText = await apiResponse.text();
+    console.log("[Room lookup] TikTok room API:", apiResponse.status, "bytes:", apiText.length);
+    const data = JSON.parse(apiText);
+    const id = data?.data?.user?.roomId ||
+      data?.data?.liveRoom?.roomId ||
+      data?.data?.room_info?.id ||
+      findId(apiText);
+    if (id && String(id).match(/^\d{10,}$/) && !data?.statusCode) {
+      console.log("[Room lookup] TikTok API found room ID:", String(id));
+      return String(id);
+    }
+    console.log("[Room lookup] TikTok API returned no usable room ID; status:", data?.statusCode ?? data?.status_code ?? "unknown", data?.message || "");
+  } catch (error) {
+    console.log("[Room lookup] TikTok API lookup failed:", error?.message || error);
+  }
+
   // Reliable fallback used by the earlier LIVE game: load TikTok in Chromium
   // and inspect both the page and TikTok's embedded hydration JSON.
   let browser;
@@ -180,7 +266,43 @@ async function resolveRoomId(username) {
       console.log("[Room lookup] Chromium found room ID:", id);
       return id;
     }
-    console.log("[Room lookup] Chromium did not expose a room ID.");
+    console.log("[Room lookup] LIVE page had no room ID; checking profile metadata...");
+    try {
+      await page.goto(`https://www.tiktok.com/@${encodeURIComponent(username)}`, {
+        waitUntil: "domcontentloaded", timeout: 20000
+      });
+      await page.waitForTimeout(3500);
+      inspect(page.url());
+      inspect(await page.content());
+      const profileScripts = await page.evaluate(() => ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"]
+        .map(id => document.getElementById(id)?.textContent || "").filter(Boolean));
+      for (const item of profileScripts) {
+        inspect(item);
+        try {
+          const walk = (value, depth=0) => {
+            if (!value || depth > 16) return;
+            if (Array.isArray(value)) return value.forEach(v => walk(v, depth+1));
+            if (typeof value !== "object") return;
+            for (const [key, child] of Object.entries(value)) {
+              if (/^(roomId|room_id|roomID|webcastId|webcast_id)$/i.test(key)) {
+                const id = String(child ?? "").match(/[0-9]{10,}/)?.[0];
+                if (id) candidates.add(id);
+              }
+              walk(child, depth+1);
+            }
+          };
+          walk(JSON.parse(item));
+        } catch {}
+      }
+    } catch (error) {
+      console.log("[Room lookup] Profile metadata check failed:", error?.message || error);
+    }
+    if (candidates.size) {
+      const id = [...candidates][0];
+      console.log("[Room lookup] Chromium profile found room ID:", id);
+      return id;
+    }
+    console.log("[Room lookup] Chromium and profile did not expose a room ID.");
   } catch (error) {
     console.error("[Room lookup] Chromium fallback failed:", error?.message || error);
   } finally {
