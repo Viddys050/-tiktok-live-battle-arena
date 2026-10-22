@@ -131,17 +131,25 @@ async function connect(username) {
     state.connected = false;
     let requestErrors = "";
     try {
-      const details = connection?.config?.requestErrs;
-      if (details) requestErrors = JSON.stringify(details);
-    } catch {}
+      const details = error?.errors || error?.requestErrors || error?.causes || error?.cause || connection?.config?.requestErrs;
+      if (details) {
+        requestErrors = JSON.stringify(details, (key, value) => {
+          if (value instanceof Error) return { name: value.name, message: value.message, stack: value.stack };
+          return value;
+        });
+      }
+    } catch (detailError) {
+      requestErrors = "Could not serialize diagnostic details: " + String(detailError?.message || detailError);
+    }
     const message = String(error?.message || error);
     console.error("[TikTok LIVE connection failed]", {
       username: state.username,
+      errorName: error?.name || "",
       message,
-      requestErrs: requestErrors || "(not exposed by connector)",
+      requestErrors: requestErrors || "(connector did not expose nested errors)",
       stack: error?.stack || ""
     });
-    state.error = safe(requestErrors ? message + " | Request errors: " + requestErrors : message, 1000);
+    state.error = safe(requestErrors ? message + " | Details: " + requestErrors : message, 1800);
     logEvent("system", "Connection failed: " + state.error);
     emitState();
     throw error;
