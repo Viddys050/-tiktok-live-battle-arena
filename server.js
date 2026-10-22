@@ -137,6 +137,7 @@ async function connect(username) {
 }
 
 app.use(express.json({ limit: "32kb" }));
+app.get("/", (_req, res) => res.sendFile(path.join(root, "public", "dashboard.html")));
 app.get("/monitor", (_req, res) => res.sendFile(path.join(root, "public", "dashboard.html")));
 app.get("/health", (_req, res) => res.json({ ok: true, connected: state.connected }));
 app.get("/api/state", (_req, res) => res.json(state));
