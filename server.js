@@ -6,98 +6,157 @@ import { Server } from "socket.io";
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from "tiktok-live-connector";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const app = express(), server = http.createServer(app);
+const app = express();
+const server = http.createServer(app);
 const io = new Server(server);
 const PORT = Number(process.env.PORT || 3000);
-const state = { connected:false, demoMode:true, username:"", roomId:"", likesTotal:0, viewers:0, scores:{putin:0,zelensky:0}, teams:{}, supporters:{}, events:[], chat:[], gifts:[], round:{number:1,secondsLeft:120,running:true} };
+
+const state = {
+  connected: false,
+  username: "",
+  roomId: "",
+  likesTotal: 0,
+  viewers: 0,
+  giftEvents: 0,
+  gifts: [],
+  chat: [],
+  events: [],
+  supporters: {},
+  error: ""
+};
 let connection = null;
-const limit = (a,v,n) => { a.unshift(v); if(a.length>n)a.length=n; };
-const safe = (v,n=250) => String(v ?? "").replace(/[<>]/g,"").slice(0,n);
-const emit = () => io.emit("state",state);
-function event(type,text,extra={}) { const e={id:Date.now()+Math.random(),time:new Date().toISOString(),type,text:safe(text),...extra}; limit(state.events,e,100); io.emit("event",e); }
-function teamFor(user,message="") {
- const id=String(user?.userId ?? user?.id ?? user?.uniqueId ?? user?.displayId ?? user?.nickname ?? "viewer");
- const m=String(message).toLowerCase();
- if(/\b(putin|russia|team red)\b/.test(m)) state.teams[id]="putin";
- if(/\b(zelensky|ukraine|team blue)\b/.test(m)) state.teams[id]="zelensky";
- return state.teams[id] || null;
+const safe = (value, max = 300) => String(value ?? "").replace(/[<>]/g, "").slice(0, max);
+const addLatest = (array, item, max = 100) => {
+  array.unshift(item);
+  if (array.length > max) array.length = max;
+};
+const emitState = () => io.emit("state", state);
+
+function logEvent(type, text, extra = {}) {
+  const item = { id: Date.now() + Math.random(), time: new Date().toISOString(), type, text: safe(text), ...extra };
+  addLatest(state.events, item);
+  io.emit("event", item);
 }
-function score(team,points){ if(team) state.scores[team]+=Math.max(0,Math.round(points)); }
-function processChat(d){
- const u=d.user||{}, name=safe(u.displayId||u.nickname||u.uniqueId||"viewer",60), message=safe(d.comment||d.content||d.text||"",300), team=teamFor(u,message);
- const item={time:new Date().toISOString(),username:name,message,team}; limit(state.chat,item,150); io.emit("chat",item);
- if(team) event("team","@"+name+" joined Team "+(team==="putin"?"Putin / Russia":"Zelensky / Ukraine"),{username:name,team});
- emit();
+
+function handleChat(data) {
+  const user = data?.user || {};
+  const item = {
+    time: new Date().toISOString(),
+    username: safe(user.displayId || user.nickname || user.uniqueId || "viewer", 60),
+    message: safe(data?.comment || data?.content || data?.text || "", 500)
+  };
+  addLatest(state.chat, item, 200);
+  io.emit("chat", item);
+  logEvent("chat", "@" + item.username + ": " + item.message, { username: item.username });
+  emitState();
 }
-function processGift(d){
- const u=d.user||{}, name=safe(u.displayId||u.nickname||u.uniqueId||"viewer",60);
- const gift=safe(d.giftDetails?.giftName||d.gift?.name||d.extendedGiftInfo?.name||d.giftName||"Gift",80);
- const count=Math.max(1,Number(d.repeatCount||1)), type=Number(d.giftDetails?.giftType??d.gift?.type??d.giftType??0);
- if(type===1 && d.repeatEnd!==true && Number(d.repeatEnd)!==1) return;
- const diamonds=Math.max(1,Number(d.giftDetails?.diamondCount??d.gift?.diamondCount??d.diamondCount??1));
- const team=teamFor(u), points=diamonds*count*10;
- if(team) score(team,points);
- const id=String(u.userId??u.id??u.uniqueId??name), username=name;
- if(!state.supporters[id]) state.supporters[id]={id,username,team:null,points:0,gifts:0};
- Object.assign(state.supporters[id],{username,team:team||state.supporters[id].team});
- state.supporters[id].points+=points; state.supporters[id].gifts+=count;
- const item={time:new Date().toISOString(),username,name:gift,count,diamonds,points,team};
- limit(state.gifts,item,100); io.emit("gift",item);
- event("gift","@"+name+" sent "+gift+" x"+count+(team?" — +"+points+" points":" — type PUTIN or ZELENSKY first"),{username,team,points,giftName:gift});
- emit();
+
+function handleGift(data) {
+  const user = data?.user || {};
+  const giftName = safe(data?.giftDetails?.giftName || data?.gift?.name || data?.extendedGiftInfo?.name || data?.giftName || "Gift", 100);
+  const giftType = Number(data?.giftDetails?.giftType ?? data?.gift?.type ?? data?.giftType ?? 0);
+  if (giftType === 1 && data?.repeatEnd !== true && Number(data?.repeatEnd) !== 1) return;
+
+  const username = safe(user.displayId || user.nickname || user.uniqueId || "viewer", 60);
+  const count = Math.max(1, Number(data?.repeatCount || 1));
+  const diamondsEach = Math.max(0, Number(data?.giftDetails?.diamondCount ?? data?.gift?.diamondCount ?? data?.diamondCount ?? 0));
+  const item = { time: new Date().toISOString(), username, name: giftName, count, diamonds: diamondsEach * count };
+  addLatest(state.gifts, item, 150);
+  state.giftEvents += count;
+  const id = String(user.userId ?? user.id ?? user.uniqueId ?? username);
+  if (!state.supporters[id]) state.supporters[id] = { username, gifts: 0, diamonds: 0 };
+  state.supporters[id].username = username;
+  state.supporters[id].gifts += count;
+  state.supporters[id].diamonds += item.diamonds;
+  io.emit("gift", item);
+  logEvent("gift", "@" + username + " sent " + giftName + " ×" + count, { username, giftName, count });
+  emitState();
 }
-function processLike(d){
- const count=Math.max(1,Number(d.likeCount||1)); state.likesTotal+=count;
- const team=state.scores.putin<=state.scores.zelensky?"putin":"zelensky";
- const points=Math.max(1,Math.floor(count/10)); score(team,points);
- event("like","+"+count+" likes — comeback boost for Team "+(team==="putin"?"Putin":"Zelensky"),{team,points});
- emit();
+
+function handleLike(data) {
+  const count = Math.max(1, Number(data?.likeCount || 1));
+  state.likesTotal += count;
+  logEvent("like", "+" + count.toLocaleString("en-US") + " likes", { count, total: state.likesTotal });
+  emitState();
 }
-async function disconnect(){
- if(connection){try{await connection.disconnect()}catch{}}
- connection=null; state.connected=false; state.roomId=""; emit();
+
+async function disconnect() {
+  if (connection) {
+    try { await connection.disconnect(); } catch {}
+  }
+  connection = null;
+  state.connected = false;
+  state.roomId = "";
+  emitState();
 }
-async function connect(username){
- await disconnect();
- state.username=safe(String(username||"").replace(/^@/,"").trim(),80);
- if(!state.username) throw new Error("Enter your TikTok username.");
- state.demoMode=false;
- connection=new TikTokLiveConnection(state.username);
- connection.on(WebcastEvent.CHAT,processChat);
- connection.on(WebcastEvent.GIFT,processGift);
- connection.on(WebcastEvent.LIKE,processLike);
- connection.on(WebcastEvent.ROOM_USER,d=>{state.viewers=Number(d.viewerCount||d.total||state.viewers);emit()});
- connection.on(ControlEvent.ERROR,d=>event("system","TikTok connector: "+(d?.info||d?.exception?.message||"connection error")));
- connection.on(ControlEvent.DISCONNECTED,()=>{state.connected=false;event("system","TikTok disconnected.");emit()});
- try{
-  const r=await connection.connect(); state.connected=true; state.roomId=String(r?.roomId||connection.roomId||"");
-  event("system","Connected to @"+state.username+"'s LIVE."); emit();
- }catch(e){state.connected=false;event("system","Connection failed: "+(e?.message||e));emit();throw e}
+
+async function connect(username) {
+  await disconnect();
+  state.username = safe(String(username || "").replace(/^@/, "").trim(), 80);
+  if (!state.username) throw new Error("Enter your TikTok username without @.");
+  state.likesTotal = 0;
+  state.viewers = 0;
+  state.giftEvents = 0;
+  state.gifts = [];
+  state.chat = [];
+  state.events = [];
+  state.supporters = {};
+  state.error = "";
+  connection = new TikTokLiveConnection(state.username);
+  connection.on(WebcastEvent.CHAT, handleChat);
+  connection.on(WebcastEvent.GIFT, handleGift);
+  connection.on(WebcastEvent.LIKE, handleLike);
+  connection.on(WebcastEvent.ROOM_USER, data => {
+    const viewers = Number(data?.viewerCount ?? data?.total ?? data?.userCount);
+    if (Number.isFinite(viewers) && viewers >= 0) state.viewers = viewers;
+    emitState();
+  });
+  connection.on(ControlEvent.ERROR, data => {
+    state.error = safe(data?.info || data?.exception?.message || "TikTok connection error", 500);
+    logEvent("system", state.error);
+    emitState();
+  });
+  connection.on(ControlEvent.DISCONNECTED, () => {
+    state.connected = false;
+    logEvent("system", "TikTok LIVE connection disconnected.");
+    emitState();
+  });
+  try {
+    const result = await connection.connect();
+    state.connected = true;
+    state.roomId = String(result?.roomId || connection.roomId || "");
+    logEvent("system", "Connected to @" + state.username + "'s LIVE.");
+    emitState();
+  } catch (error) {
+    state.connected = false;
+    state.error = safe(error?.message || error, 500);
+    logEvent("system", "Connection failed: " + state.error);
+    emitState();
+    throw error;
+  }
 }
-app.use(express.json({limit:"32kb"}));
-app.use(express.static(path.join(root,"public")));
-app.get("/api/state",(_q,r)=>r.json(state));
-app.get("/health",(_q,r)=>r.json({ok:true,connected:state.connected,demoMode:state.demoMode}));
-app.post("/api/connect",async(q,r)=>{try{await connect(q.body?.username);r.json({ok:true,connected:state.connected})}catch(e){r.status(400).json({ok:false,error:safe(e?.message||e,500)})}});
-app.post("/api/disconnect",async(_q,r)=>{await disconnect();state.demoMode=true;event("system","Disconnected. Demo mode is available.");r.json({ok:true})});
-app.post("/api/demo",(q,r)=>{
- const action=safe(q.body?.action||"",30), team=q.body?.team==="zelensky"?"zelensky":"putin", username=safe(q.body?.username||"DemoViewer",60);
- const user={id:"demo-"+username,displayId:username};
- state.demoMode=true;
- if(action==="chat")processChat({user,comment:team==="putin"?"PUTIN":"ZELENSKY"});
- else if(action==="like")processLike({likeCount:Number(q.body?.count||100)});
- else if(action==="gift")processGift({user,giftName:safe(q.body?.gift||"Rose",80),repeatCount:Number(q.body?.count||1),diamondCount:Number(q.body?.diamonds||1),repeatEnd:true});
- else if(action==="boss"){score(team,1000);event("boss","BOSS EVENT! Team "+team.toUpperCase()+" deals 1,000 damage!",{team,points:1000});emit()}
- else return r.status(400).json({ok:false,error:"Unknown demo action"});
- r.json({ok:true});
+
+app.use(express.json({ limit: "32kb" }));
+app.get("/monitor", (_req, res) => res.sendFile(path.join(root, "public", "dashboard.html")));
+app.get("/health", (_req, res) => res.json({ ok: true, connected: state.connected }));
+app.get("/api/state", (_req, res) => res.json(state));
+app.post("/api/connect", async (req, res) => {
+  try {
+    await connect(req.body?.username);
+    res.json({ ok: true, connected: state.connected });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: safe(error?.message || error, 500) });
+  }
 });
-app.post("/api/round",(q,r)=>{
- if(q.body?.action==="pause")state.round.running=false;
- else if(q.body?.action==="resume")state.round.running=true;
- else if(q.body?.action==="reset"){state.round.secondsLeft=120;state.scores={putin:0,zelensky:0};}
- emit();r.json({ok:true});
+app.post("/api/disconnect", async (_req, res) => {
+  await disconnect();
+  logEvent("system", "Dashboard disconnected from TikTok LIVE.");
+  res.json({ ok: true });
 });
-io.on("connection",s=>{s.emit("state",state);s.emit("snapshot",{chat:state.chat,gifts:state.gifts,events:state.events})});
-setInterval(()=>{if(!state.round.running)return;state.round.secondsLeft--;if(state.round.secondsLeft<=0){const winner=state.scores.putin===state.scores.zelensky?"DRAW":state.scores.putin>state.scores.zelensky?"PUTIN":"ZELENSKY";event("round","ROUND "+state.round.number+" WINNER: "+winner);state.round.number++;state.round.secondsLeft=120;state.scores={putin:0,zelensky:0}}emit()},1000);
-server.listen(PORT,"0.0.0.0",()=>console.log("Putin vs Zelensky LIVE ARENA listening on port "+PORT));
-process.on("SIGINT",async()=>{await disconnect();server.close(()=>process.exit(0))});
+app.use(express.static(path.join(root, "public")));
+io.on("connection", socket => {
+  socket.emit("state", state);
+  socket.emit("snapshot", { chat: state.chat, gifts: state.gifts, events: state.events });
+});
+server.listen(PORT, "0.0.0.0", () => console.log("TikTok LIVE Monitor listening on port " + PORT));
+process.on("SIGINT", async () => { await disconnect(); server.close(() => process.exit(0)); });
