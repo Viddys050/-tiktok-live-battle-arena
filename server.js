@@ -102,7 +102,7 @@ async function connect(username) {
   state.events = [];
   state.supporters = {};
   state.error = "";
-  connection = new TikTokLiveConnection(state.username);
+  connection = new TikTokLiveConnection(state.username, { processInitialData: false });
   connection.on(WebcastEvent.CHAT, handleChat);
   connection.on(WebcastEvent.GIFT, handleGift);
   connection.on(WebcastEvent.LIKE, handleLike);
