@@ -1,16 +1,17 @@
-# TikTok LIVE Battle Arena v2
+# PUTIN vs ZELENSKY — TikTok LIVE Arena
 
-Mobile-first interactieve TikTok LIVE game met portrait 9:16 arena, chatcommando's, likes, gifts, levels, HP, energie, teams, leaderboard, ronden en visuele effecten.
+A mobile-first arcade-style fan-made game with a separate PC dashboard.
 
-## Start
-1. Node.js 20+ installeren.
-2. `npm install`
-3. `npm start`
-4. Open `/control.html`.
-5. Vul je TikTok gebruikersnaam in en verbind.
-6. Open de gamepagina op de iPhone.
+## Deploy
+Render should install dependencies from package.json and run `npm start` with Node.js 20 or newer. The app listens on the Render-provided PORT and 0.0.0.0.
 
-## Belangrijk
-De iPhone toont de game; Node.js moet op een server/computer draaien. Voor echte TikTok-events moet de server online bereikbaar blijven.
+## Use
+- Main mobile game: /
+- PC control room: /pc.html
+- Health check: /health
+- In the PC control room, enter the LIVE creator username without @ and choose Connect LIVE.
+- Viewers type PUTIN / RUSSIA / TEAM RED or ZELENSKY / UKRAINE / TEAM BLUE to select a side.
+- Likes add points to the team that is behind; gifts add points to the sender's selected team. Demo buttons let you test the UI.
 
-De gebruikte TikTok LIVE connector is onofficieel/reverse-engineered. Controleer de actuele TikTok-regels en connectorstatus voordat je hem commercieel gebruikt.
+## Important limitations
+This uses the unofficial, reverse-engineered tiktok-live-connector package. TikTok changes may break it, and a connection attempt can fail even if the app deploys successfully. The game has not been verified against a live account in this deployment. Do not enter TikTok passwords or cookies. The PC dashboard currently has no login protection, so use it only while you control access to the URL.
