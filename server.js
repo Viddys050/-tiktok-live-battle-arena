@@ -3,6 +3,8 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
+import { chromium as playwright } from "playwright-core";
+import chromium from "@sparticuz/chromium";
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from "tiktok-live-connector";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +82,113 @@ function handleLike(data) {
   emitState();
 }
 
+
+async function resolveRoomId(username) {
+  const patterns = [
+    /"roomId"\\s*:\\s*"?([0-9]{10,})"?/i,
+    /"room_id"\\s*:\\s*"?([0-9]{10,})"?/i,
+    /webcast_id\\D{0,100}([0-9]{10,})/i,
+    /room_id=(\\d{10,})/i
+  ];
+  const findId = value => {
+    const body = String(value || "");
+    for (const pattern of patterns) {
+      const match = body.match(pattern);
+      if (match?.[1]) return match[1];
+    }
+    return "";
+  };
+
+  // Fast path: TikTok may expose the room ID in the LIVE page HTML.
+  try {
+    const response = await fetch(`https://www.tiktok.com/@${encodeURIComponent(username)}/live`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 Version/18.6 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9"
+      },
+      signal: AbortSignal.timeout(12000)
+    });
+    const html = await response.text();
+    const id = findId(html);
+    console.log("[Room lookup] TikTok HTML:", response.status, "bytes:", html.length, "roomId:", id || "not found");
+    if (id) return id;
+  } catch (error) {
+    console.log("[Room lookup] direct TikTok request failed:", error?.message || error);
+  }
+
+  // Reliable fallback used by the earlier LIVE game: load TikTok in Chromium
+  // and inspect both the page and TikTok's embedded hydration JSON.
+  let browser;
+  try {
+    console.log("[Room lookup] Trying Chromium fallback for @" + username);
+    browser = await playwright.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: true
+    });
+    const page = await browser.newPage({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36",
+      viewport: { width: 960, height: 540 }
+    });
+    const candidates = new Set();
+    const inspect = value => {
+      const body = String(value || "");
+      for (const pattern of patterns) {
+        for (const match of body.matchAll(new RegExp(pattern.source, "gi"))) {
+          if (match[1]) candidates.add(match[1]);
+        }
+      }
+      for (const match of body.matchAll(/(?:roomId|room_id|webcastId|webcast_id)[^0-9]{0,100}([0-9]{10,})/gi)) candidates.add(match[1]);
+    };
+    page.on("response", async response => {
+      try {
+        if (!/tiktok\\.com/i.test(response.url())) return;
+        inspect(response.url());
+        if (/live|room|webcast|api-live/i.test(response.url())) inspect(await response.text());
+      } catch {}
+    });
+    await page.goto(`https://www.tiktok.com/@${encodeURIComponent(username)}/live`, {
+      waitUntil: "domcontentloaded", timeout: 30000
+    });
+    await page.waitForTimeout(6500);
+    inspect(page.url());
+    inspect(await page.content());
+    const scripts = await page.evaluate(() => ["__UNIVERSAL_DATA_FOR_REHYDRATION__", "sigi-persisted-data", "SIGI_STATE"]
+      .map(id => document.getElementById(id)?.textContent || "").filter(Boolean));
+    for (const item of scripts) {
+      inspect(item);
+      try {
+        const walk = (value, depth=0) => {
+          if (!value || depth > 14) return;
+          if (Array.isArray(value)) return value.forEach(v => walk(v, depth+1));
+          if (typeof value !== "object") return;
+          for (const [key, child] of Object.entries(value)) {
+            if (/^(roomId|room_id|roomID|webcastId|webcast_id)$/i.test(key)) {
+              const id = String(child ?? "").match(/[0-9]{10,}/)?.[0];
+              if (id) candidates.add(id);
+            }
+            walk(child, depth+1);
+          }
+        };
+        walk(JSON.parse(item));
+      } catch {}
+    }
+    await page.close().catch(() => {});
+    if (candidates.size) {
+      const id = [...candidates][0];
+      console.log("[Room lookup] Chromium found room ID:", id);
+      return id;
+    }
+    console.log("[Room lookup] Chromium did not expose a room ID.");
+  } catch (error) {
+    console.error("[Room lookup] Chromium fallback failed:", error?.message || error);
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+  throw new Error("Could not resolve TikTok LIVE room ID. TikTok may be blocking this server's requests.");
+}
+
 async function disconnect() {
   if (connection) {
     try { await connection.disconnect(); } catch {}
@@ -126,7 +235,11 @@ async function connect(username) {
     emitState();
   });
   try {
-    const result = await connection.connect();
+    const roomId = await resolveRoomId(state.username);
+    state.roomId = String(roomId);
+    logEvent("system", "Found TikTok LIVE room ID. Connecting to LIVE…");
+    emitState();
+    const result = await connection.connect(roomId);
     state.connected = true;
     state.roomId = String(result?.roomId || connection.roomId || "");
     logEvent("system", "Connected to @" + state.username + "'s LIVE.");
